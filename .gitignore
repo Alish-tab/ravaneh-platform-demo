@@ -1,0 +1,32 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Build
+dist/
+build/
+.output/
+
+# Cache
+.cache/
+.vite/
+.nuxt/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Go
+bin/
+tmp/
