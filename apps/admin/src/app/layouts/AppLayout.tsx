@@ -17,12 +17,12 @@ const navItems: NavItem[] = [
 
 export function AppLayout() {
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
+    <div className="flex min-h-screen flex-col bg-[var(--bg-base)] text-[var(--text-primary)]">
+      <header className="border-b border-[var(--border-default)] bg-[var(--bg-elevated)]">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-lg font-semibold tracking-tight">روانه</p>
-            <p className="text-xs text-slate-500">پنل ادمین — پایه اولیه</p>
+            <p className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">روانه</p>
+            <p className="text-xs text-[var(--text-muted)]">پنل ادمین</p>
           </div>
           <nav className="flex flex-wrap gap-2" aria-label="ناوبری اصلی">
             {navItems.map((item) => (
@@ -32,10 +32,10 @@ export function AppLayout() {
                 end={item.end}
                 className={({ isActive }) =>
                   [
-                    'rounded-md px-3 py-1.5 text-sm transition-colors',
+                    'rounded-[var(--r-sm)] px-3 py-1.5 text-sm transition-colors',
                     isActive
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
+                      ? 'bg-[var(--accent-dim)] text-[var(--accent-text)]'
+                      : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]',
                   ].join(' ')
                 }
               >

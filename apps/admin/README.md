@@ -29,5 +29,8 @@ npm run dev
 ## Notes
 
 - RTL (`lang=fa` / `dir=rtl`) is enabled in `index.html`.
-- Brand font files are not in the repo yet; system font fallback is configured.
-- No UI component library is installed; styling is Tailwind CSS only.
+- Primary UI font is self-hosted **Vazirmatn** (`src/shared/assets/fonts/`).
+- Design tokens and control grammar live under `src/app/styles/` (Dark Foundation).
+- No UI component library; lightweight primitives are in `src/shared/ui/`.
+- Map visual grammar (route palette, stop marker styles) is in `src/shared/map/grammar.ts` for Leaflet — SVG Foundation mock is not used.
+- Internal visual smoke: `/foundation` (not in primary nav).

@@ -2,6 +2,7 @@ import { createBrowserRouter, type RouteObject } from 'react-router-dom';
 
 import { AppLayout } from '@/app/layouts/AppLayout';
 import { DriversPage } from '@/features/drivers/pages/DriversPage';
+import { FoundationSmokePage } from '@/features/foundation-smoke/pages/FoundationSmokePage';
 import { HomePage } from '@/features/home/pages/HomePage';
 import { ImportsPage } from '@/features/import-review/pages/ImportsPage';
 import { MapSmokePage } from '@/features/map-smoke/pages/MapSmokePage';
@@ -20,6 +21,8 @@ export const appRoutes: RouteObject[] = [
       { path: 'planning', element: <PlanningPage /> },
       { path: 'drivers', element: <DriversPage /> },
       { path: 'map', element: <MapSmokePage /> },
+      /* Internal visual smoke — not in primary nav */
+      { path: 'foundation', element: <FoundationSmokePage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

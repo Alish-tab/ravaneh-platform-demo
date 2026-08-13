@@ -1,0 +1,71 @@
+/* Design tokens extracted from Ravaneh Admin Foundation (visual reference).
+   Presentation only — not domain/API contracts. */
+
+:root {
+  color-scheme: dark;
+
+  /* Typography */
+  --font-primary: 'Vazirmatn', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', Menlo, Consolas, monospace;
+
+  /* Surface hierarchy */
+  --bg-base: #0f1318;
+  --bg-elevated: #141c27;
+  --bg-panel: #1a2434;
+  --bg-surface: #22303f;
+  --bg-hover: rgba(255, 255, 255, 0.04);
+  --bg-selected: rgba(61, 123, 212, 0.14);
+
+  /* Borders */
+  --border-subtle: #1d2c40;
+  --border-default: #2a3d58;
+  --border-strong: #3d5472;
+  --border-focus: #3d7bd4;
+
+  /* Text */
+  --text-primary: #dce5f0;
+  --text-secondary: #7d95b5;
+  --text-muted: #4a5e78;
+  --text-disabled: #324055;
+
+  /* Accent / primary action */
+  --accent: #3d7bd4;
+  --accent-hover: #5090e0;
+  --accent-dim: rgba(61, 123, 212, 0.16);
+  --accent-text: #e0eeff;
+  --accent-active: #3068b8;
+
+  /* Semantic states (operational — distinct from route identity) */
+  --success: #2b9d6f;
+  --success-muted: rgba(43, 157, 111, 0.13);
+  --success-text: #55c896;
+  --warning: #c99035;
+  --warning-muted: rgba(201, 144, 53, 0.13);
+  --warning-text: #dfaa55;
+  --error: #c44444;
+  --error-muted: rgba(196, 68, 68, 0.13);
+  --error-text: #e06565;
+  --info: #3d7bd4;
+  --info-muted: rgba(61, 123, 212, 0.13);
+  --info-text: #7ab0f0;
+
+  /* Route identity palette — presentation only; desaturated vs semantic alarms */
+  --route-1: #7888d0;
+  --route-2: #c07870;
+  --route-3: #5aaa90;
+  --route-4: #9a80c8;
+  --route-5: #b89060;
+  --route-6: #48acba;
+
+  /* Radius */
+  --r-xs: 2px;
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 10px;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.65);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.75);
+}
