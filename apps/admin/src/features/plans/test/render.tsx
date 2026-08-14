@@ -1,0 +1,46 @@
+import { cleanup, render } from '@testing-library/react';
+import { afterEach, vi } from 'vitest';
+import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+
+import { AppProviders } from '@/app/providers/AppProviders';
+import { appRoutes } from '@/app/router';
+import {
+  createPlansFixturePort,
+  type PlansDataPort,
+} from '@/features/plans/fixture/plans-fixture';
+import type { A01PlanViewModel } from '@/features/plans/a01-types';
+
+vi.mock('@/shared/map/BaseMap', () => ({
+  BaseMap: () => <div data-testid="base-map-stub">map</div>,
+}));
+
+vi.mock('@/shared/config/env', () => ({
+  env: {
+    apiBaseUrl: 'http://localhost:8080',
+    mapTileUrl: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    mapAttribution: '© OpenStreetMap contributors',
+  },
+}));
+
+afterEach(() => {
+  cleanup();
+});
+
+export function createTestPort(seed?: A01PlanViewModel[]): PlansDataPort {
+  return createPlansFixturePort({
+    seed,
+    listDelayMs: 0,
+    mutateDelayMs: 0,
+  });
+}
+
+export function renderApp(initialEntry = '/', port?: PlansDataPort) {
+  const router = createMemoryRouter(appRoutes, { initialEntries: [initialEntry] });
+  const fixture = port ?? createTestPort();
+  const view = render(
+    <AppProviders plansPort={fixture}>
+      <RouterProvider router={router} />
+    </AppProviders>,
+  );
+  return { ...view, port: fixture, router };
+}

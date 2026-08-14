@@ -1,53 +1,65 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { Outlet, useLocation, useMatch } from 'react-router-dom';
 
-type NavItem = {
-  to: string;
-  label: string;
-  end?: boolean;
-};
+import { GlobalNavigation } from '@/app/layouts/GlobalNavigation';
+import { GlobalTopContext } from '@/app/layouts/GlobalTopContext';
+import { usePlan } from '@/features/plans/hooks/usePlansData';
+import '@/features/plans/styles/a01.css';
 
-const navItems: NavItem[] = [
-  { to: '/', label: 'خانه', end: true },
-  { to: '/plans', label: 'پلن‌ها' },
-  { to: '/imports', label: 'ایمپورت' },
-  { to: '/planning', label: 'برنامه‌ریزی' },
-  { to: '/drivers', label: 'راننده‌ها' },
-  { to: '/map', label: 'نقشه (Smoke)' },
-];
+function useShellTopContext() {
+  const location = useLocation();
+  const planMatch = useMatch('/plans/:planId/intake');
+  const planId = planMatch?.params.planId;
+  const { plan } = usePlan(planId);
+
+  return useMemo(() => {
+    if (planMatch) {
+      return {
+        title: plan?.name ?? 'برنامه',
+        breadcrumb: 'برنامه‌ها' as string | undefined,
+      };
+    }
+    if (location.pathname.startsWith('/plans')) {
+      return { title: 'برنامه‌ها', breadcrumb: undefined };
+    }
+    if (location.pathname.startsWith('/ops')) {
+      return { title: 'عملیات جاری', breadcrumb: undefined };
+    }
+    if (location.pathname.startsWith('/drivers')) {
+      return { title: 'رانندگان', breadcrumb: undefined };
+    }
+    if (location.pathname.startsWith('/imports')) {
+      return { title: 'ایمپورت', breadcrumb: undefined };
+    }
+    if (location.pathname.startsWith('/planning')) {
+      return { title: 'برنامه‌ریزی', breadcrumb: undefined };
+    }
+    if (location.pathname.startsWith('/foundation')) {
+      return { title: 'Foundation Smoke', breadcrumb: undefined };
+    }
+    if (location.pathname.startsWith('/map')) {
+      return { title: 'نقشه (Smoke)', breadcrumb: undefined };
+    }
+    return { title: 'روانه', breadcrumb: undefined };
+  }, [location.pathname, plan?.name, planMatch]);
+}
 
 export function AppLayout() {
+  const [navCollapsed, setNavCollapsed] = useState(false);
+  const top = useShellTopContext();
+
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--bg-base)] text-[var(--text-primary)]">
-      <header className="border-b border-[var(--border-default)] bg-[var(--bg-elevated)]">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">روانه</p>
-            <p className="text-xs text-[var(--text-muted)]">پنل ادمین</p>
-          </div>
-          <nav className="flex flex-wrap gap-2" aria-label="ناوبری اصلی">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  [
-                    'rounded-[var(--r-sm)] px-3 py-1.5 text-sm transition-colors',
-                    isActive
-                      ? 'bg-[var(--accent-dim)] text-[var(--accent-text)]'
-                      : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]',
-                  ].join(' ')
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
+    <div className="admin-shell">
+      <GlobalNavigation
+        collapsed={navCollapsed}
+        onToggle={() => setNavCollapsed((value) => !value)}
+      />
+      <div className="admin-shell-main">
+        <GlobalTopContext title={top.title} breadcrumb={top.breadcrumb} />
+        <div className="admin-shell-workspace">
+          <Outlet />
         </div>
-      </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-0 py-2">
-        <Outlet />
-      </main>
+      </div>
     </div>
   );
 }

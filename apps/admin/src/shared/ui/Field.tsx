@@ -1,8 +1,8 @@
 import type { InputHTMLAttributes, ReactNode } from 'react';
 
 type FieldProps = {
-  label?: string;
-  hint?: string;
+  label?: ReactNode;
+  hint?: ReactNode;
   error?: string;
   children: ReactNode;
   htmlFor?: string;
