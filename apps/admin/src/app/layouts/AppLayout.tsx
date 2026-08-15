@@ -7,11 +7,14 @@ import { usePlan } from '@/features/plans/hooks/usePlansData';
 import '@/app/styles/admin-shell.css';
 import '@/features/plans/styles/plan-workspace.css';
 
+const PLAN_WORKSPACE_STAGES = new Set(['intake', 'review', 'planning']);
+
 function useShellTopContext() {
   const location = useLocation();
-  const intakeMatch = useMatch('/plans/:planId/intake');
-  const reviewMatch = useMatch('/plans/:planId/review');
-  const planMatch = intakeMatch ?? reviewMatch;
+  const planWorkspaceMatch = useMatch('/plans/:planId/:stage');
+  const stage = planWorkspaceMatch?.params.stage;
+  const planMatch =
+    stage && PLAN_WORKSPACE_STAGES.has(stage) ? planWorkspaceMatch : null;
   const planId = planMatch?.params.planId;
   const { plan } = usePlan(planId);
 
@@ -33,9 +36,6 @@ function useShellTopContext() {
     }
     if (location.pathname.startsWith('/imports')) {
       return { title: 'ایمپورت', breadcrumb: undefined };
-    }
-    if (location.pathname.startsWith('/planning')) {
-      return { title: 'برنامه‌ریزی', breadcrumb: undefined };
     }
     if (location.pathname.startsWith('/foundation')) {
       return { title: 'Foundation Smoke', breadcrumb: undefined };

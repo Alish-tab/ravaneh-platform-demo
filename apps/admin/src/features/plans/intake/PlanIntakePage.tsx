@@ -211,7 +211,13 @@ export function PlanIntakePage() {
         activeStage="intake"
         onStageChange={(stage) => {
           if (stage === 'review') goToReviewHandoff();
-          if (stage === 'planning') navigate('/planning');
+          /* Forward to Planning only when plan workflow state has reached it. */
+          if (
+            stage === 'planning' &&
+            (plan.currentStage === 'planning' || plan.currentStage === 'execution')
+          ) {
+            navigate(`/plans/${plan.id}/planning`);
+          }
           /* Execution and the current Intake stage remain in this workspace. */
         }}
       />

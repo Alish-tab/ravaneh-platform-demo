@@ -139,7 +139,9 @@ describe('Review shell', () => {
     await waitFor(() => expect(continueButton).toBeEnabled());
 
     await user.click(continueButton);
-    await waitFor(() => expect(router.state.location.pathname).toBe('/planning'));
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/plans/P-2405/planning'),
+    );
     const plan = await port.getPlan('P-2405');
     expect(plan).toMatchObject({ currentStage: 'planning', status: 'planning_active' });
   });

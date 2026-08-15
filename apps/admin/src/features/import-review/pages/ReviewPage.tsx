@@ -33,11 +33,21 @@ export function ReviewPage() {
         status: 'planning_active',
         lastChanged: 'همین الان',
       });
-      navigate('/planning');
+      navigate(`/plans/${plan.id}/planning`);
     } catch {
       setContinueError(true);
       setContinuing(false);
     }
+  };
+
+  const goToPlanningStage = () => {
+    if (!plan) return;
+    /* Plan already past Review — navigate without re-checking Review fixture actions. */
+    if (plan.currentStage === 'planning' || plan.currentStage === 'execution') {
+      navigate(`/plans/${plan.id}/planning`);
+      return;
+    }
+    void continueToPlanning();
   };
 
   if (status === 'loading')
@@ -75,7 +85,7 @@ export function ReviewPage() {
         activeStage="review"
         onStageChange={(stage) => {
           if (stage === 'intake') navigate(`/plans/${plan.id}/intake`);
-          if (stage === 'planning') void continueToPlanning();
+          if (stage === 'planning') goToPlanningStage();
         }}
       />
       <ReviewSummaryToolbar

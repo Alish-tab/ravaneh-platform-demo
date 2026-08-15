@@ -43,6 +43,14 @@ export function PlansPage() {
   }, [plans, search, stageFilter]);
 
   const openPlan = (plan: A01PlanViewModel) => {
+    if (plan.currentStage === 'review') {
+      navigate(`/plans/${plan.id}/review`);
+      return;
+    }
+    if (plan.currentStage === 'planning' || plan.currentStage === 'execution') {
+      navigate(`/plans/${plan.id}/planning`);
+      return;
+    }
     navigate(`/plans/${plan.id}/intake`);
   };
 
