@@ -1,4 +1,4 @@
-import { toPersianDigits } from '@/shared/lib/format';
+﻿import { toPersianDigits } from '@/shared/lib/format';
 import { Button, InlineMessage, LtrData } from '@/shared/ui';
 
 import type {
@@ -23,9 +23,9 @@ export function SelectedFilePanel({
   onUpload: () => void;
 }) {
   return (
-    <div className="a01-card">
-      <div className="a01-card-row border-b border-[var(--border-subtle)]">
-        <div className="a01-file-icon success">
+    <div className="intake-card">
+      <div className="intake-card-row border-b border-[var(--border-subtle)]">
+        <div className="intake-file-icon success">
           <Icon d={ICONS.file_excel} size={16} />
         </div>
         <div className="min-w-0 flex-1">
@@ -64,9 +64,9 @@ export function SelectedFilePanel({
 export function UploadProgressState({ progress }: { progress: number }) {
   const pct = Math.min(100, Math.round(progress));
   return (
-    <div className="a01-card p-5">
+    <div className="intake-card p-5">
       <div className="mb-3.5 flex items-center gap-3">
-        <div className="a01-file-icon accent">
+        <div className="intake-file-icon accent">
           <Icon d={ICONS.upload} size={14} />
         </div>
         <div>
@@ -77,8 +77,17 @@ export function UploadProgressState({ progress }: { progress: number }) {
         </div>
         <LtrData className="ms-auto text-xs text-[var(--text-secondary)]">{pct}%</LtrData>
       </div>
-      <div className="h-1 overflow-hidden rounded-sm bg-[var(--bg-surface)]" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-        <div className="h-full rounded-sm bg-[var(--accent)] transition-[width] duration-300" style={{ width: `${pct}%` }} />
+      <div
+        className="h-1 overflow-hidden rounded-sm bg-[var(--bg-surface)]"
+        role="progressbar"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <div
+          className="h-full rounded-sm bg-[var(--accent)] transition-[width] duration-300"
+          style={{ width: `${pct}%` }}
+        />
       </div>
     </div>
   );
@@ -94,7 +103,7 @@ export function UploadFailedState({
   onSelectAnother: () => void;
 }) {
   return (
-    <div className="a01-card a01-card-error">
+    <div className="intake-card intake-card-error">
       <div className="flex items-start gap-3 px-[18px] py-4">
         <span className="mt-0.5 shrink-0 text-[var(--error-text)]">
           <Icon d={ICONS.error_x} size={16} />
@@ -104,8 +113,8 @@ export function UploadFailedState({
             بارگذاری فایل ناموفق بود
           </div>
           <div className="text-[12.5px] leading-7 text-[var(--text-secondary)]">
-            اتصال در حین بارگذاری قطع شد. فایل به سرور نرسیده است. اتصال اینترنت را بررسی کنید و دوباره
-            تلاش کنید.
+            اتصال در حین بارگذاری قطع شد. فایل به سرور نرسیده است. اتصال اینترنت را بررسی کنید و
+            دوباره تلاش کنید.
           </div>
           <LtrData className="mt-1.5 text-[11px] text-[var(--text-muted)]">{fileName}</LtrData>
         </div>
@@ -125,18 +134,20 @@ export function UploadFailedState({
 
 export function ProcessingState() {
   return (
-    <div className="a01-card">
+    <div className="intake-card">
       <div className="flex items-center gap-3 p-5">
-        <div className="a01-file-icon accent">
-          <span className="a01-spin text-[var(--accent)]">
+        <div className="intake-file-icon accent">
+          <span className="intake-spin text-[var(--accent)]">
             <Icon d={ICONS.file} size={14} />
           </span>
         </div>
         <div className="flex-1">
-          <div className="text-[13px] font-medium text-[var(--text-primary)]">در حال پردازش فایل…</div>
+          <div className="text-[13px] font-medium text-[var(--text-primary)]">
+            در حال پردازش فایل…
+          </div>
           <div className="mt-0.5 text-xs leading-6 text-[var(--text-secondary)]">
-            سرور در حال تجزیه و بررسی ساختار فایل است. می‌توانید صفحه را ترک کنید — نتیجه پردازش ذخیره
-            خواهد شد.
+            سرور در حال تجزیه و بررسی ساختار فایل است. می‌توانید صفحه را ترک کنید — نتیجه پردازش
+            ذخیره خواهد شد.
           </div>
         </div>
       </div>
@@ -156,7 +167,7 @@ export function StructuralErrorState({
 }) {
   const err = A01_STRUCTURAL_ERROR_COPY[errorType] ?? A01_STRUCTURAL_ERROR_COPY.unreadable!;
   return (
-    <div className="a01-card a01-card-error">
+    <div className="intake-card intake-card-error">
       <div className="flex items-start gap-3 px-[18px] py-4">
         <span className="mt-0.5 shrink-0 text-[var(--error-text)]">
           <Icon d={ICONS.error_x} size={16} />
@@ -189,7 +200,7 @@ export function ImportResultSummary({
     summary.locationReviewCount + summary.duplicateOrderIdCount + summary.otherReviewCount;
 
   return (
-    <div className="a01-card overflow-hidden">
+    <div className="intake-card overflow-hidden">
       <div className="flex items-center gap-2.5 border-b border-[var(--border-subtle)] px-[18px] py-3.5">
         <span className="shrink-0 text-[var(--success-text)]">
           <Icon d={ICONS.check_circle} size={16} />
@@ -210,7 +221,7 @@ export function ImportResultSummary({
         {[
           { label: 'مجموع خوانده شد', value: summary.totalRows, color: 'var(--text-secondary)' },
           { label: 'ردیف وارد شده', value: summary.importedCount, color: 'var(--success-text)' },
-          { label: 'نیازمند بررسی در A02', value: reviewTotal, color: 'var(--warning-text)' },
+          { label: 'نیازمند بررسی داده', value: reviewTotal, color: 'var(--warning-text)' },
         ].map((stat, index) => (
           <div
             key={stat.label}
@@ -219,10 +230,10 @@ export function ImportResultSummary({
               borderInlineEnd: index < 2 ? '1px solid var(--border-subtle)' : undefined,
             }}
           >
-            <div className="text-base font-bold leading-none" style={{ color: stat.color }}>
+            <div className="text-base leading-none font-bold" style={{ color: stat.color }}>
               {toPersianDigits(stat.value)}
             </div>
-            <div className="mt-0.5 whitespace-nowrap text-[10px] text-[var(--text-muted)]">
+            <div className="mt-0.5 text-[10px] whitespace-nowrap text-[var(--text-muted)]">
               {stat.label}
             </div>
           </div>
@@ -231,7 +242,7 @@ export function ImportResultSummary({
 
       <div className="flex flex-col gap-1.5 border-b border-[var(--border-subtle)] px-[18px] py-3">
         <div className="mb-1 text-[10.5px] font-semibold tracking-wide text-[var(--text-muted)]">
-          یافته‌های قابل بررسی در A02
+          یافته‌های قابل بررسی در مرحله بررسی داده
         </div>
         {[
           {
@@ -271,8 +282,8 @@ export function ImportResultSummary({
 
       <div className="flex items-center justify-between px-[18px] py-3">
         <div className="text-xs text-[var(--text-muted)]">
-          {toPersianDigits(summary.importedCount)} ردیف وارد شده · {toPersianDigits(reviewTotal)} مورد
-          نیازمند بررسی
+          {toPersianDigits(summary.importedCount)} ردیف وارد شده · {toPersianDigits(reviewTotal)}{' '}
+          مورد نیازمند بررسی
         </div>
         <Button variant="primary" onClick={onContinueToReview}>
           بررسی موارد
@@ -291,7 +302,7 @@ export function ImportCleanState({
   onContinue: () => void;
 }) {
   return (
-    <div className="a01-card a01-card-success">
+    <div className="intake-card intake-card-success">
       <div className="flex items-start gap-3 px-[18px] py-4">
         <span className="mt-0.5 shrink-0 text-[var(--success-text)]">
           <Icon d={ICONS.check_circle} size={18} />
@@ -301,7 +312,9 @@ export function ImportCleanState({
             فایل با موفقیت خوانده شد
           </div>
           <div className="text-[12.5px] leading-6 text-[var(--text-secondary)]">
-            <span className="badge-count me-1">{toPersianDigits(importedFile.rowCount)} ردیف وارد شده</span>
+            <span className="badge-count me-1">
+              {toPersianDigits(importedFile.rowCount)} ردیف وارد شده
+            </span>
             — موردی برای بررسی یافت نشد.
           </div>
         </div>
@@ -329,9 +342,9 @@ export function CurrentFileSummary({
   onReplace: () => void;
 }) {
   return (
-    <div className="a01-card">
-      <div className="a01-card-row border-b border-[var(--border-subtle)]">
-        <div className="a01-file-icon success">
+    <div className="intake-card">
+      <div className="intake-card-row border-b border-[var(--border-subtle)]">
+        <div className="intake-file-icon success">
           <Icon d={ICONS.file_excel} size={14} />
         </div>
         <div className="min-w-0 flex-1">
@@ -361,16 +374,23 @@ export function CurrentFileSummary({
         {downstreamRisk === 'planning' ? (
           <>
             <span className="text-xs text-[var(--warning-text)]">
-              <Icon d={ICONS.alert} size={12} /> برنامه‌ریزی در جریان است — جایگزینی فایل محدود شده است.
+              <Icon d={ICONS.alert} size={12} /> برنامه‌ریزی در جریان است — جایگزینی فایل محدود شده
+              است.
             </span>
-            <Button variant="subtle" size="sm" className="a01-warn-btn" onClick={onReplace}>
+            <Button
+              variant="subtle"
+              size="sm"
+              className="intake-warning-button"
+              onClick={onReplace}
+            >
               جایگزینی با تأیید
             </Button>
           </>
         ) : null}
         {downstreamRisk === 'published' ? (
           <span className="text-xs text-[var(--text-muted)]">
-            <Icon d={ICONS.info} size={12} /> برنامه منتشر شده — داده‌های عملیاتی قابل جایگزینی نیستند.
+            <Icon d={ICONS.info} size={12} /> برنامه منتشر شده — داده‌های عملیاتی قابل جایگزینی
+            نیستند.
           </span>
         ) : null}
       </div>
@@ -388,7 +408,7 @@ export function ReplaceDatasetConfirm({
   onCancel: () => void;
 }) {
   return (
-    <div className="a01-card a01-card-warning">
+    <div className="intake-card intake-card-warning">
       <div className="px-[18px] py-4">
         <div className="mb-3 flex items-start gap-2.5">
           <span className="shrink-0 text-[var(--warning-text)]">
@@ -400,13 +420,11 @@ export function ReplaceDatasetConfirm({
             </div>
             <div className="text-[12.5px] leading-7 text-[var(--text-secondary)]">
               جایگزینی فایل، موارد تحویل وارد شده قبلی و تصمیمات بررسی را پاک می‌کند.
-              {downstreamRisk === 'planning'
-                ? ' برنامه‌ریزی جاری نیز باید بازنشانی شود.'
-                : null}
+              {downstreamRisk === 'planning' ? ' برنامه‌ریزی جاری نیز باید بازنشانی شود.' : null}
             </div>
             <p className="mt-2 text-[11px] text-[var(--text-muted)]">
-              توجه: رفتار قطعی mutation پس از جایگزینی باید از Backend/OpenAPI بیاید — این Fixture فقط
-              تعامل UI را شبیه‌سازی می‌کند.
+              توجه: رفتار قطعی mutation پس از جایگزینی باید از Backend/OpenAPI بیاید — این Fixture
+              فقط تعامل UI را شبیه‌سازی می‌کند.
             </p>
           </div>
         </div>
@@ -440,7 +458,7 @@ export function ReplacementUploadFailedState({
 }) {
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="a01-card a01-card-error">
+      <div className="intake-card intake-card-error">
         <div className="flex items-start gap-3 px-[18px] py-3.5">
           <span className="mt-0.5 shrink-0 text-[var(--error-text)]">
             <Icon d={ICONS.error_x} size={16} />
@@ -465,15 +483,17 @@ export function ReplacementUploadFailedState({
         </div>
       </div>
 
-      <div className="a01-card overflow-hidden border-[rgba(43,157,111,0.35)]">
+      <div className="intake-card overflow-hidden border-[rgba(43,157,111,0.35)]">
         <div className="flex items-center gap-1.5 border-b border-[rgba(43,157,111,0.2)] bg-[rgba(43,157,111,0.07)] px-3.5 py-2">
           <span className="text-[var(--success-text)]">
             <Icon d={ICONS.check} size={12} />
           </span>
-          <span className="text-[11px] font-semibold text-[var(--success-text)]">فایل فعال فعلی</span>
+          <span className="text-[11px] font-semibold text-[var(--success-text)]">
+            فایل فعال فعلی
+          </span>
         </div>
         <div className="flex items-center gap-3 px-3.5 py-3">
-          <div className="a01-file-icon success !h-[30px] !w-[30px]">
+          <div className="intake-file-icon success !h-[30px] !w-[30px]">
             <Icon d={ICONS.file_excel} size={13} />
           </div>
           <div className="min-w-0 flex-1">
@@ -493,7 +513,10 @@ export function ReplacementUploadFailedState({
 
 export function StaleDataBanner({ onRefresh }: { onRefresh: () => void }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-[var(--r-sm)] border border-[rgba(201,144,53,0.3)] bg-[var(--warning-muted)] px-3.5 py-2" role="status">
+    <div
+      className="flex items-center gap-2.5 rounded-[var(--r-sm)] border border-[rgba(201,144,53,0.3)] bg-[var(--warning-muted)] px-3.5 py-2"
+      role="status"
+    >
       <span className="shrink-0 text-[var(--warning-text)]">
         <Icon d={ICONS.alert} size={13} />
       </span>

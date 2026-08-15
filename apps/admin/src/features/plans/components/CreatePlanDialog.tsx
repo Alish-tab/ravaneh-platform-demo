@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+﻿import { useEffect, useMemo } from 'react';
 
 import { zodResolver } from '@/shared/lib/forms';
 import { Controller, useForm, z } from '@/shared/lib/forms';
@@ -57,10 +57,7 @@ export function CreatePlanDialog({ onSubmit, onCancel }: CreatePlanDialogProps) 
   }, [deliveryDate, windowValue, nameEdited, setValue]);
 
   const createError = errors.root?.message;
-  const suggestedHint = useMemo(
-    () => !nameEdited && name !== 'برنامه تحویل',
-    [nameEdited, name],
-  );
+  const suggestedHint = useMemo(() => !nameEdited && name !== 'برنامه تحویل', [nameEdited, name]);
 
   const submit = handleSubmit(async (values) => {
     clearErrors('root');
@@ -104,7 +101,12 @@ export function CreatePlanDialog({ onSubmit, onCancel }: CreatePlanDialogProps) 
         </>
       }
     >
-      <form id="a01-create-plan-form" className="flex flex-col gap-3.5" onSubmit={submit} noValidate>
+      <form
+        id="a01-create-plan-form"
+        className="flex flex-col gap-3.5"
+        onSubmit={submit}
+        noValidate
+      >
         <Field
           label={
             <>
@@ -148,7 +150,9 @@ export function CreatePlanDialog({ onSubmit, onCancel }: CreatePlanDialogProps) 
                     <button
                       key={option}
                       type="button"
-                      className={['a01-window-chip', selected ? 'selected' : ''].filter(Boolean).join(' ')}
+                      className={['plan-window-chip', selected ? 'selected' : '']
+                        .filter(Boolean)
+                        .join(' ')}
                       aria-pressed={selected}
                       onClick={() => field.onChange(selected ? '' : option)}
                     >

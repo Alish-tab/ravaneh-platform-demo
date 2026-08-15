@@ -1,5 +1,5 @@
 /**
- * SVG icon paths for A01 UI (presentation only).
+ * SVG icon paths for plan UI (presentation only).
  */
 export const ICONS = {
   search: 'M7 12A5 5 0 1 0 7 2a5 5 0 0 0 0 10zm4.2 1.8 2.8 2.8',

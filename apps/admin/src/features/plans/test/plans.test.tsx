@@ -1,11 +1,11 @@
-import { screen, waitFor, within } from '@testing-library/react';
+﻿import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { A01_DEMO_PLANS } from '@/features/plans/fixture/demo-plans';
 import { createTestPort, renderApp } from '@/features/plans/test/render';
 
-describe('A01 Plans list', () => {
+describe('Plans list', () => {
   it('renders populated list', async () => {
     renderApp('/plans');
     expect(await screen.findByRole('heading', { name: 'برنامه‌ها' })).toBeInTheDocument();
@@ -62,7 +62,7 @@ describe('A01 Plans list', () => {
   });
 });
 
-describe('A01 Create Plan', () => {
+describe('Create Plan', () => {
   it('validates required delivery date', async () => {
     const user = userEvent.setup();
     renderApp('/plans');
@@ -129,16 +129,14 @@ describe('A01 Create Plan', () => {
     await user.type(name, 'برنامه تست خطا');
 
     await user.click(screen.getByRole('button', { name: 'ایجاد برنامه' }));
-    expect(
-      await screen.findByText(/ایجاد برنامه با خطا مواجه شد/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/ایجاد برنامه با خطا مواجه شد/)).toBeInTheDocument();
 
     expect((screen.getByLabelText(/تاریخ تحویل/) as HTMLInputElement).value).toBe('۱۴۰۳/۰۶/۱۱');
     expect((screen.getByLabelText('نام برنامه') as HTMLInputElement).value).toBe('برنامه تست خطا');
   });
 });
 
-describe('A01 Intake', () => {
+describe('Intake', () => {
   it('supports file selection and selected state', async () => {
     const user = userEvent.setup();
     const port = createTestPort([
@@ -221,7 +219,7 @@ describe('A01 Intake', () => {
     vi.useRealTimers();
   });
 
-  it('reaches parsed needs review and hands off to imports', async () => {
+  it('reaches parsed needs review and opens the plan review route', async () => {
     const user = userEvent.setup();
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const port = createTestPort([
@@ -245,13 +243,11 @@ describe('A01 Intake', () => {
     await user.click(await screen.findByRole('button', { name: /بارگذاری و بررسی/ }));
     await vi.advanceTimersByTimeAsync(3000);
 
-    expect(
-      await screen.findByText(/برخی موارد نیاز به بررسی دارند/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/برخی موارد نیاز به بررسی دارند/)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /بررسی موارد/ }));
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/imports');
+      expect(router.state.location.pathname).toBe('/plans/P-TEST/review');
     });
     vi.useRealTimers();
   });
@@ -321,7 +317,11 @@ describe('A01 Intake', () => {
 
     expect(await screen.findByText('بارگذاری فایل جدید ناموفق بود')).toBeInTheDocument();
     expect(screen.getByText('فایل فعال فعلی')).toBeInTheDocument();
-    expect(within(screen.getByText('فایل فعال فعلی').closest('.a01-card')!.parentElement!).getByText('previous.xlsx')).toBeInTheDocument();
+    expect(
+      within(screen.getByText('فایل فعال فعلی').closest('.intake-card')!.parentElement!).getByText(
+        'previous.xlsx',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('shows stale banner from query flag and refreshes', async () => {

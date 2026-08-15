@@ -1,4 +1,4 @@
-import { Button } from '@/shared/ui';
+﻿import { Button } from '@/shared/ui';
 
 import type { A01StageKey } from '@/features/plans/a01-types';
 import { Icon, ICONS } from '@/features/plans/components/icons';
@@ -6,15 +6,17 @@ import { A01_STAGE_LABELS } from '@/features/plans/presentation';
 
 export function PlansEmptyState({ onCreatePlan }: { onCreatePlan: () => void }) {
   return (
-    <div className="a01-centered">
+    <div className="plans-centered">
       <div className="max-w-[340px] px-6 text-center">
-        <div className="a01-state-icon mx-auto mb-4">
+        <div className="plans-state-icon mx-auto mb-4">
           <Icon d={ICONS.plans} size={20} />
         </div>
-        <h2 className="mb-2 text-sm font-semibold text-[var(--text-primary)]">هنوز برنامه‌ای وجود ندارد</h2>
+        <h2 className="mb-2 text-sm font-semibold text-[var(--text-primary)]">
+          هنوز برنامه‌ای وجود ندارد
+        </h2>
         <p className="mb-5 text-[12.5px] leading-7 text-[var(--text-secondary)]">
-          برنامه تحویل ظرف عملیاتی است که داده‌های تحویل وارد شده، مسیرها و تخصیص رانندگان را در خود نگه
-          می‌دارد. برای شروع یک برنامه جدید ایجاد کنید.
+          برنامه تحویل ظرف عملیاتی است که داده‌های تحویل وارد شده، مسیرها و تخصیص رانندگان را در خود
+          نگه می‌دارد. برای شروع یک برنامه جدید ایجاد کنید.
         </p>
         <Button variant="primary" onClick={onCreatePlan}>
           <Icon d={ICONS.plus} size={13} />
@@ -35,7 +37,7 @@ export function PlansNoResults({
   onClear: () => void;
 }) {
   return (
-    <div className="a01-centered">
+    <div className="plans-centered">
       <div className="max-w-[320px] px-6 text-center">
         <h2 className="mb-2 text-sm font-semibold text-[var(--text-primary)]">
           برنامه‌ای با این فیلتر پیدا نشد
@@ -46,11 +48,7 @@ export function PlansNoResults({
               جستجو برای «<span className="text-[var(--text-primary)]">{search}</span>»{' '}
             </>
           ) : null}
-          {stageFilter !== 'all' ? (
-            <>
-              در مرحله «{A01_STAGE_LABELS[stageFilter]}»{' '}
-            </>
-          ) : null}
+          {stageFilter !== 'all' ? <>در مرحله «{A01_STAGE_LABELS[stageFilter]}» </> : null}
           نتیجه‌ای برنگرداند. فیلترها را پاک کنید و دوباره امتحان کنید.
         </p>
         <Button variant="secondary" size="sm" onClick={onClear}>
@@ -63,9 +61,9 @@ export function PlansNoResults({
 
 export function PlansErrorState({ onRetry }: { onRetry: () => void }) {
   return (
-    <div className="a01-centered">
+    <div className="plans-centered">
       <div className="max-w-[320px] px-6 text-center">
-        <div className="a01-state-icon a01-state-icon-error mx-auto mb-4">
+        <div className="plans-state-icon plans-state-icon-error mx-auto mb-4">
           <Icon d={ICONS.warning_tri} size={20} />
         </div>
         <h2 className="mb-2 text-sm font-semibold text-[var(--text-primary)]">

@@ -1,4 +1,4 @@
-import { toPersianDigits } from '@/shared/lib/format';
+﻿import { toPersianDigits } from '@/shared/lib/format';
 import { Button, Input } from '@/shared/ui';
 
 import type { A01StageKey } from '@/features/plans/a01-types';
@@ -27,9 +27,9 @@ export function PlansToolbar({
   const filtered = search.trim().length > 0 || stageFilter !== 'all';
 
   return (
-    <div className="a01-toolbar">
+    <div className="plans-toolbar">
       <div className="shrink-0">
-        <h1 className="text-[15px] font-bold leading-tight tracking-tight text-[var(--text-primary)]">
+        <h1 className="text-[15px] leading-tight font-bold tracking-tight text-[var(--text-primary)]">
           برنامه‌ها
         </h1>
         <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">
@@ -39,7 +39,7 @@ export function PlansToolbar({
         </p>
       </div>
 
-      <div className="a01-toolbar-divider" />
+      <div className="plans-toolbar-divider" />
 
       <div className="input-wrap w-[220px]">
         <Input
@@ -59,7 +59,9 @@ export function PlansToolbar({
           <button
             key={opt.key}
             type="button"
-            className={['seg-opt', stageFilter === opt.key ? 'active' : ''].filter(Boolean).join(' ')}
+            className={['seg-opt', stageFilter === opt.key ? 'active' : '']
+              .filter(Boolean)
+              .join(' ')}
             aria-pressed={stageFilter === opt.key}
             onClick={() => onStageFilter(opt.key)}
           >

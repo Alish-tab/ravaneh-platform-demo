@@ -1,14 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { Button, InlineMessage } from '@/shared/ui';
 
 import { PlanContextHeader } from '@/features/plans/components/PlanContextHeader';
 import { usePlansDataPort } from '@/features/plans/fixture/usePlansFixture';
-import {
-  buildParsedImportedFile,
-  statusAfterParse,
-} from '@/features/plans/fixture/plans-fixture';
+import { buildParsedImportedFile, statusAfterParse } from '@/features/plans/fixture/plans-fixture';
 import { usePlan } from '@/features/plans/hooks/usePlansData';
 import { ImportDropzone } from '@/features/plans/intake/components/ImportDropzone';
 import {
@@ -32,7 +29,7 @@ import {
   type IntakeViewState,
 } from '@/features/plans/intake/intake-state';
 import { formatFileSizeLabel } from '@/features/plans/plan-name';
-import '@/features/plans/styles/a01.css';
+import '@/features/plans/styles/intake.css';
 
 export function PlanIntakePage() {
   const { planId } = useParams<{ planId: string }>();
@@ -73,7 +70,7 @@ export function PlanIntakePage() {
   const showStale = searchParams.get('stale') === '1' && !staleDismissed;
 
   const goToReviewHandoff = () => {
-    navigate('/imports');
+    if (planId) navigate(`/plans/${planId}/review`);
   };
 
   const finishParse = async (fileName: string, replacement: boolean) => {
@@ -170,7 +167,7 @@ export function PlanIntakePage() {
 
   if (status === 'loading') {
     return (
-      <div className="a01-page p-6">
+      <div className="plan-workspace-page p-6">
         <InlineMessage tone="info">در حال بارگذاری برنامه…</InlineMessage>
       </div>
     );
@@ -178,7 +175,7 @@ export function PlanIntakePage() {
 
   if (status === 'missing' || !plan) {
     return (
-      <div className="a01-page flex flex-col items-start gap-3 p-6">
+      <div className="plan-workspace-page flex flex-col items-start gap-3 p-6">
         <InlineMessage tone="error">برنامه یافت نشد.</InlineMessage>
         <Link to="/plans">
           <Button variant="secondary" size="sm">
@@ -191,7 +188,7 @@ export function PlanIntakePage() {
 
   if (status === 'error') {
     return (
-      <div className="a01-page flex flex-col items-start gap-3 p-6">
+      <div className="plan-workspace-page flex flex-col items-start gap-3 p-6">
         <InlineMessage tone="error">بارگذاری برنامه ناموفق بود.</InlineMessage>
         <Button variant="secondary" size="sm" onClick={() => void reload()}>
           تلاش مجدد
@@ -208,16 +205,16 @@ export function PlanIntakePage() {
     });
 
   return (
-    <div className="a01-page">
-          <PlanContextHeader
-            plan={plan}
-            activeStage="intake"
-            onStageChange={(stage) => {
-              if (stage === 'review') navigate('/imports');
-              if (stage === 'planning') navigate('/planning');
-              /* execution / intake: stay in A01 intake workspace */
-            }}
-          />
+    <div className="plan-workspace-page">
+      <PlanContextHeader
+        plan={plan}
+        activeStage="intake"
+        onStageChange={(stage) => {
+          if (stage === 'review') goToReviewHandoff();
+          if (stage === 'planning') navigate('/planning');
+          /* Execution and the current Intake stage remain in this workspace. */
+        }}
+      />
 
       <div className="flex-1 overflow-y-auto px-7 py-6">
         <div className="mx-auto flex max-w-[680px] flex-col gap-4">

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 
 import { Button, Field, InlineMessage, Input } from '@/shared/ui';
 
@@ -57,7 +57,12 @@ export function EditPlanDialog({
           <Button variant="subtle" onClick={onCancel} disabled={saving}>
             انصراف
           </Button>
-          <Button variant="primary" loading={saving} disabled={!name.trim() || !deliveryDate.trim()} onClick={() => void submit()}>
+          <Button
+            variant="primary"
+            loading={saving}
+            disabled={!name.trim() || !deliveryDate.trim()}
+            onClick={() => void submit()}
+          >
             ذخیره
           </Button>
         </>
@@ -66,8 +71,8 @@ export function EditPlanDialog({
       <div className="flex flex-col gap-3.5">
         {isDownstreamLocked ? (
           <InlineMessage tone="warning">
-            این برنامه در مرحله برنامه‌ریزی یا اجراست. تغییر مشخصات فقط روی نمایش اثر می‌گذارد و قوانین
-            نهایی Backend هنوز تعریف نشده‌اند.
+            این برنامه در مرحله برنامه‌ریزی یا اجراست. تغییر مشخصات فقط روی نمایش اثر می‌گذارد و
+            قوانین نهایی Backend هنوز تعریف نشده‌اند.
           </InlineMessage>
         ) : null}
 
@@ -87,7 +92,9 @@ export function EditPlanDialog({
                 <button
                   key={option}
                   type="button"
-                  className={['a01-window-chip', selected ? 'selected' : ''].filter(Boolean).join(' ')}
+                  className={['plan-window-chip', selected ? 'selected' : '']
+                    .filter(Boolean)
+                    .join(' ')}
                   aria-pressed={selected}
                   onClick={() => setWindowValue(selected ? '' : option)}
                 >
@@ -99,7 +106,11 @@ export function EditPlanDialog({
         </Field>
 
         <Field label="نام برنامه" htmlFor="a01-edit-name">
-          <Input id="a01-edit-name" value={name} onChange={(event) => setName(event.target.value)} />
+          <Input
+            id="a01-edit-name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
         </Field>
 
         {error ? <InlineMessage tone="error">{error}</InlineMessage> : null}

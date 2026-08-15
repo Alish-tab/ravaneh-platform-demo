@@ -4,11 +4,14 @@ import { Outlet, useLocation, useMatch } from 'react-router-dom';
 import { GlobalNavigation } from '@/app/layouts/GlobalNavigation';
 import { GlobalTopContext } from '@/app/layouts/GlobalTopContext';
 import { usePlan } from '@/features/plans/hooks/usePlansData';
-import '@/features/plans/styles/a01.css';
+import '@/app/styles/admin-shell.css';
+import '@/features/plans/styles/plan-workspace.css';
 
 function useShellTopContext() {
   const location = useLocation();
-  const planMatch = useMatch('/plans/:planId/intake');
+  const intakeMatch = useMatch('/plans/:planId/intake');
+  const reviewMatch = useMatch('/plans/:planId/review');
+  const planMatch = intakeMatch ?? reviewMatch;
   const planId = planMatch?.params.planId;
   const { plan } = usePlan(planId);
 

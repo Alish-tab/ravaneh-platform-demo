@@ -1,7 +1,11 @@
-import type { A01DownstreamRisk, A01ImportedFile, A01StructuralErrorKind } from '@/features/plans/a01-types';
+import type {
+  A01DownstreamRisk,
+  A01ImportedFile,
+  A01StructuralErrorKind,
+} from '@/features/plans/a01-types';
 
 /**
- * A01 Intake UI state machine (local presentation state).
+ * Intake UI state machine (local presentation state).
  * Not a domain/API contract.
  */
 export type IntakeViewState =
