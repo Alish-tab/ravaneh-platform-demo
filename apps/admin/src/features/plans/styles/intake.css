@@ -1,0 +1,121 @@
+﻿/* Intake upload and import-result presentation. */
+.file-drop {
+  border: 1px dashed var(--border-default);
+  border-radius: var(--r-md);
+  padding: 36px 24px;
+  text-align: center;
+  background: var(--bg-elevated);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.file-drop:hover,
+.file-drop.dragover,
+.file-drop:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.intake-drop-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: all 0.15s;
+}
+
+.intake-drop-icon.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.intake-extension-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--r-xs);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+.intake-card {
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+
+.intake-card-error {
+  border-color: rgba(196, 68, 68, 0.35);
+  background: var(--error-muted);
+}
+
+.intake-card-success {
+  border-color: rgba(43, 157, 111, 0.35);
+  background: var(--success-muted);
+}
+
+.intake-card-warning {
+  border-color: rgba(201, 144, 53, 0.4);
+  background: var(--warning-muted);
+}
+
+.intake-card-row {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.intake-file-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-sm);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.intake-file-icon.success {
+  background: rgba(43, 157, 111, 0.12);
+  border: 1px solid rgba(43, 157, 111, 0.25);
+  color: var(--success-text);
+}
+
+.intake-file-icon.accent {
+  background: var(--accent-dim);
+  border: 1px solid rgba(61, 123, 212, 0.3);
+  color: var(--accent);
+}
+
+.intake-warning-button {
+  color: var(--warning-text) !important;
+  border-color: rgba(201, 144, 53, 0.4) !important;
+}
+
+.intake-spin {
+  display: inline-flex;
+  animation: intake-spin 2s linear infinite;
+}
+
+@keyframes intake-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

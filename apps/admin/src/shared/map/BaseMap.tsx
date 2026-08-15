@@ -1,5 +1,3 @@
-import 'leaflet/dist/leaflet.css';
-
 import type { ReactNode } from 'react';
 import { MapContainer } from 'react-leaflet';
 
@@ -11,6 +9,8 @@ type BaseMapProps = {
   zoom?: number;
   className?: string;
   children?: ReactNode;
+  zoomControl?: boolean;
+  scrollWheelZoom?: boolean;
 };
 
 /** Tehran default — smoke/demo only; business maps will pass plan/depot centers later. */
@@ -25,9 +25,17 @@ export function BaseMap({
   zoom = 12,
   className = 'h-80 w-full',
   children,
+  zoomControl = true,
+  scrollWheelZoom = false,
 }: BaseMapProps) {
   return (
-    <MapContainer center={center} zoom={zoom} className={className} scrollWheelZoom={false}>
+    <MapContainer
+      center={center}
+      zoom={zoom}
+      className={className}
+      zoomControl={zoomControl}
+      scrollWheelZoom={scrollWheelZoom}
+    >
       <BaseTileLayer url={env.mapTileUrl} attribution={env.mapAttribution} />
       {children}
     </MapContainer>

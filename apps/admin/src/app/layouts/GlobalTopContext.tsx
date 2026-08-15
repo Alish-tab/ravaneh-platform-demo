@@ -9,10 +9,14 @@ type GlobalTopContextProps = {
 };
 
 /**
- * A01 GlobalTopContext — compact workspace context bar (≈44px).
+ * Compact global workspace context bar (≈44px).
  * Branding lives in the sidebar; this is not the old product header.
  */
-export function GlobalTopContext({ title, breadcrumb, breadcrumbTo = '/plans' }: GlobalTopContextProps) {
+export function GlobalTopContext({
+  title,
+  breadcrumb,
+  breadcrumbTo = '/plans',
+}: GlobalTopContextProps) {
   return (
     <div className="admin-shell-top">
       <div className="flex min-w-0 flex-1 items-center gap-1.5">
@@ -28,7 +32,9 @@ export function GlobalTopContext({ title, breadcrumb, breadcrumbTo = '/plans' }:
             <span className="text-[11px] text-[var(--text-disabled)]">/</span>
           </>
         ) : null}
-        <span className="truncate text-[13px] font-semibold text-[var(--text-primary)]">{title}</span>
+        <span className="truncate text-[13px] font-semibold text-[var(--text-primary)]">
+          {title}
+        </span>
       </div>
     </div>
   );

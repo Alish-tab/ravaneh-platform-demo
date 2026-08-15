@@ -16,7 +16,7 @@ type GlobalNavigationProps = {
 };
 
 /**
- * A01 product global navigation — vertical sidebar.
+ * Product global navigation — vertical sidebar.
  * In RTL this sits on the inline-start (right) edge of the shell.
  */
 export function GlobalNavigation({ collapsed, onToggle }: GlobalNavigationProps) {
@@ -24,10 +24,7 @@ export function GlobalNavigation({ collapsed, onToggle }: GlobalNavigationProps)
   const width = collapsed ? 52 : 196;
 
   return (
-    <aside
-      className="admin-shell-nav"
-      style={{ width, minWidth: width }}
-    >
+    <aside className="admin-shell-nav" style={{ width, minWidth: width }}>
       <div className="admin-shell-nav-brand">
         <button
           type="button"
@@ -41,10 +38,10 @@ export function GlobalNavigation({ collapsed, onToggle }: GlobalNavigationProps)
         {!collapsed ? (
           <>
             <div className="min-w-0 flex-1 overflow-hidden">
-              <div className="whitespace-nowrap text-sm font-bold tracking-tight text-[var(--text-primary)]">
+              <div className="text-sm font-bold tracking-tight whitespace-nowrap text-[var(--text-primary)]">
                 روانه
               </div>
-              <LtrIso className="whitespace-nowrap text-[10px] tracking-[0.04em] text-[var(--text-muted)]">
+              <LtrIso className="text-[10px] tracking-[0.04em] whitespace-nowrap text-[var(--text-muted)]">
                 RAVANEH
               </LtrIso>
             </div>
@@ -105,8 +102,10 @@ export function GlobalNavigation({ collapsed, onToggle }: GlobalNavigationProps)
               onClick={() => setShowAccount(false)}
             />
             <div className="admin-shell-account-popover" role="menu">
-              <div className="border-b border-[var(--border-subtle)] px-3 py-2 mb-1">
-                <div className="text-[13px] font-semibold text-[var(--text-primary)]">امین رضایی</div>
+              <div className="mb-1 border-b border-[var(--border-subtle)] px-3 py-2">
+                <div className="text-[13px] font-semibold text-[var(--text-primary)]">
+                  امین رضایی
+                </div>
                 <div className="mt-0.5 text-[11px] text-[var(--text-secondary)]">مدیر عملیات</div>
               </div>
               <button type="button" className="menu-item" role="menuitem">
@@ -133,10 +132,7 @@ export function GlobalNavigation({ collapsed, onToggle }: GlobalNavigationProps)
         {collapsed ? (
           <button
             type="button"
-            className={[
-              'admin-shell-account-collapsed',
-              showAccount ? 'active' : '',
-            ]
+            className={['admin-shell-account-collapsed', showAccount ? 'active' : '']
               .filter(Boolean)
               .join(' ')}
             title="حساب کاربری"
@@ -149,10 +145,7 @@ export function GlobalNavigation({ collapsed, onToggle }: GlobalNavigationProps)
         ) : (
           <button
             type="button"
-            className={[
-              'admin-shell-account-btn',
-              showAccount ? 'active' : '',
-            ]
+            className={['admin-shell-account-btn', showAccount ? 'active' : '']
               .filter(Boolean)
               .join(' ')}
             aria-expanded={showAccount}
@@ -167,10 +160,10 @@ export function GlobalNavigation({ collapsed, onToggle }: GlobalNavigationProps)
               <Icon d={ICONS.person} size={13} />
             </div>
             <div className="min-w-0 flex-1 overflow-hidden text-start">
-              <div className="truncate text-xs font-semibold leading-tight text-[var(--text-primary)]">
+              <div className="truncate text-xs leading-tight font-semibold text-[var(--text-primary)]">
                 امین رضایی
               </div>
-              <div className="whitespace-nowrap text-[11px] text-[var(--text-secondary)]">
+              <div className="text-[11px] whitespace-nowrap text-[var(--text-secondary)]">
                 مدیر عملیات
               </div>
             </div>

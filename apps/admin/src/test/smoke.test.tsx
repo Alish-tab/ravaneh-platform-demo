@@ -10,6 +10,10 @@ vi.mock('@/shared/map/BaseMap', () => ({
   BaseMap: () => <div data-testid="base-map-stub">map</div>,
 }));
 
+vi.mock('@/features/planning/components/PlanningMap', () => ({
+  PlanningMap: () => <div data-testid="planning-map-stub">planning-map</div>,
+}));
+
 vi.mock('@/shared/config/env', () => ({
   env: {
     apiBaseUrl: 'http://localhost:8080',
@@ -32,8 +36,8 @@ afterEach(() => {
   cleanup();
 });
 
-describe('Admin A01 shell smoke', () => {
-  it('redirects home to plans and shows A01 sidebar brand', async () => {
+describe('Admin shell smoke', () => {
+  it('redirects home to plans and shows the sidebar brand', async () => {
     renderApp('/');
 
     expect(await screen.findByRole('heading', { name: 'برنامه‌ها' })).toBeInTheDocument();
@@ -41,7 +45,7 @@ describe('Admin A01 shell smoke', () => {
     expect(screen.getByText('RAVANEH')).toBeInTheDocument();
   });
 
-  it('exposes A01 product navigation only', async () => {
+  it('exposes product navigation only', async () => {
     renderApp('/plans');
 
     const nav = await screen.findByRole('navigation', { name: 'ناوبری اصلی' });

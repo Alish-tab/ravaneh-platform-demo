@@ -14,6 +14,10 @@ vi.mock('@/shared/map/BaseMap', () => ({
   BaseMap: () => <div data-testid="base-map-stub">map</div>,
 }));
 
+vi.mock('@/features/planning/components/PlanningMap', () => ({
+  PlanningMap: () => <div data-testid="planning-map-stub">planning-map</div>,
+}));
+
 vi.mock('@/shared/config/env', () => ({
   env: {
     apiBaseUrl: 'http://localhost:8080',

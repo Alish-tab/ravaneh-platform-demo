@@ -1,0 +1,696 @@
+/* Planning workspace geometry — product naming; primitives live in foundation.css. */
+
+.planning-summary {
+  height: 38px;
+  padding-inline: 16px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-default);
+  overflow-x: auto;
+  position: relative;
+}
+
+.planning-summary-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.planning-summary-item {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.planning-summary-item--muted {
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.planning-summary-item--warn {
+  font-weight: 500;
+  font-size: 11.5px;
+  color: var(--warning-text);
+}
+
+.planning-summary-sep {
+  width: 1px;
+  height: 14px;
+  background: var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.planning-summary-label {
+  color: var(--text-muted);
+  font-size: 11.5px;
+}
+
+.planning-workspace {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Fills remaining plan-workspace-page height (header is a sibling). */
+.planning-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.planning-map-pane {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Leaflet needs a definite box; % height alone collapses inside nested flex. */
+.planning-map-pane .leaflet-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.planning-inspector {
+  width: 264px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-elevated);
+  border-inline-start: 1px solid var(--border-default);
+}
+
+.planning-inspector-collapsed {
+  width: 40px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 0;
+  background: var(--bg-elevated);
+  border-inline-start: 1px solid var(--border-default);
+}
+
+.planning-inspector-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.planning-inspector-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.planning-inspector-count {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--r-xs);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+}
+
+.planning-inspector-stats {
+  display: flex;
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.planning-inspector-stat {
+  flex: 1;
+  text-align: center;
+}
+
+.planning-inspector-stat-value {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+.planning-inspector-stat-value--warn {
+  color: var(--warning-text);
+}
+
+.planning-inspector-stat-label {
+  margin-top: 1px;
+  font-size: 9.5px;
+  color: var(--text-muted);
+}
+
+.planning-filter-tabs {
+  display: flex;
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.planning-filter-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 4px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-primary);
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.planning-filter-tab[aria-selected='true'] {
+  background: var(--bg-selected);
+  border-bottom-color: var(--accent);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.planning-filter-tab-count {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-disabled);
+}
+
+.planning-filter-tab[aria-selected='true'] .planning-filter-tab-count {
+  color: var(--accent-text);
+}
+
+.planning-inspector-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.planning-route-row,
+.planning-stop-row,
+.planning-order-row,
+.planning-unassigned-row {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  border-inline-start: 3px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  text-align: start;
+  width: 100%;
+  font-family: var(--font-primary);
+  transition: background 0.1s;
+}
+
+.planning-route-row:hover,
+.planning-stop-row:hover,
+.planning-order-row:hover,
+.planning-unassigned-row:hover {
+  background: var(--bg-hover);
+}
+
+.planning-route-row[aria-selected='true'],
+.planning-stop-row[aria-selected='true'],
+.planning-order-row[aria-selected='true'] {
+  background: var(--bg-selected);
+  border-inline-start-color: var(--accent);
+}
+
+.planning-unassigned-row[aria-selected='true'] {
+  background: rgba(223, 170, 85, 0.08);
+  border-inline-start-color: #dfaa55;
+}
+
+.planning-route-color,
+.planning-stop-pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 1.5px;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.planning-stop-pip {
+  border-radius: 50%;
+}
+
+.planning-back-btn,
+.planning-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-family: var(--font-primary);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.planning-icon-btn {
+  width: 28px;
+  height: 28px;
+  justify-content: center;
+  border-radius: var(--r-xs);
+  color: var(--text-secondary);
+}
+
+.planning-icon-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.planning-map-toolbar {
+  position: absolute;
+  top: 10px;
+  inset-inline-end: 10px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.planning-map-tool-cluster {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: rgba(20, 28, 39, 0.94);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(8px);
+}
+
+.planning-map-tool-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 1;
+  transition:
+    background 0.1s,
+    color 0.1s;
+}
+
+.planning-map-tool-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.planning-map-tool-btn:disabled {
+  color: var(--text-disabled);
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.planning-map-tool-btn[aria-pressed='true'] {
+  background: rgba(61, 123, 212, 0.18);
+  color: #7aacf7;
+}
+
+.planning-map-tool-sep {
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+.planning-route-state {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.planning-stop-seq {
+  width: 28px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding-top: 10px;
+}
+
+.planning-stop-seq-num {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.planning-unassigned-section {
+  border-top: 1px solid var(--border-default);
+}
+
+.planning-unassigned-note {
+  padding: 4px 12px 6px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  background: rgba(201, 144, 53, 0.05);
+}
+
+.planning-unassigned-assign-btn {
+  min-height: 24px !important;
+  padding: 3px 9px !important;
+  border-color: #dfaa55 !important;
+  color: #dfaa55 !important;
+  background: transparent !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+
+.planning-unassigned-assign-btn:hover:not(:disabled) {
+  background: rgba(223, 170, 85, 0.12) !important;
+}
+
+.planning-area-picker-radio {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1.5px solid var(--border-strong);
+  transition: border 0.1s;
+}
+
+.planning-area-picker-radio[data-checked='true'] {
+  border: 4px solid var(--accent);
+}
+
+.planning-unassigned-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px 5px;
+  background: rgba(201, 144, 53, 0.08);
+}
+
+.planning-unassigned-header--resolved {
+  background: rgba(43, 157, 111, 0.07);
+}
+
+.planning-unassigned-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--warning-text);
+  flex-shrink: 0;
+}
+
+.planning-unassigned-dot--resolved {
+  background: var(--success-text);
+}
+
+.planning-unassigned-row--excluded {
+  opacity: 0.65;
+  background: rgba(43, 157, 111, 0.04);
+  cursor: default;
+}
+
+.planning-unassigned-row--excluded:hover {
+  background: rgba(43, 157, 111, 0.04);
+}
+
+.planning-target-area-input {
+  width: 44px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  text-align: center;
+  padding: 0 4px;
+}
+
+.planning-target-area-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.planning-generation-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 26px;
+  padding-inline: 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(61, 139, 253, 0.12);
+  color: var(--accent);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.planning-generation-pill-spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(61, 139, 253, 0.25);
+  border-top-color: var(--accent);
+  animation: planning-gen-spin 0.7s linear infinite;
+}
+
+.planning-generation-fail-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding-inline: 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(196, 68, 68, 0.1);
+  color: var(--error-text);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.planning-generation-top-progress {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 2px;
+  overflow: hidden;
+  background: transparent;
+}
+
+.planning-generation-top-progress::after {
+  content: '';
+  display: block;
+  height: 100%;
+  width: 40%;
+  background: var(--accent);
+  animation: planning-gen-indeterminate 1.1s ease-in-out infinite;
+}
+
+.planning-generation-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2.5px solid var(--border-default);
+  border-top-color: var(--accent);
+  animation: planning-gen-spin 0.75s linear infinite;
+}
+
+.planning-generation-progress-bar {
+  width: 45%;
+  animation: planning-gen-indeterminate 1.2s ease-in-out infinite;
+}
+
+@keyframes planning-gen-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes planning-gen-indeterminate {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(280%);
+  }
+}
+
+.planning-driver-search {
+  width: 100%;
+  height: 32px;
+  box-sizing: border-box;
+  padding: 0 32px 0 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+}
+
+.planning-driver-search:focus {
+  border-color: var(--accent);
+}
+
+.planning-driver-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: none;
+  border-bottom: 1px solid var(--border-subtle);
+  background: transparent;
+  cursor: pointer;
+  text-align: start;
+  font-family: inherit;
+}
+
+.planning-driver-option:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.planning-driver-option:disabled {
+  cursor: default;
+  opacity: 0.62;
+}
+
+.planning-driver-current-badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  background: rgba(61, 123, 212, 0.12);
+  color: var(--accent-text);
+  border: 1px solid rgba(61, 123, 212, 0.22);
+}
+
+.planning-driver-change-btn {
+  padding: 4px 9px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.planning-driver-change-btn:hover {
+  border-color: var(--text-secondary);
+}
+
+.planning-driver-remove-btn {
+  margin-top: 7px;
+  padding: 3px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.planning-driver-remove-btn:hover {
+  color: var(--error-text);
+}
+
+.planning-driver-lock-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-disabled);
+  flex-shrink: 0;
+}
+
+.planning-driver-lock-btn.is-locked {
+  border-color: rgba(61, 123, 212, 0.4);
+  background: rgba(61, 123, 212, 0.1);
+  color: var(--accent-text);
+}
+
+.planning-transfer-scope-option {
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  cursor: pointer;
+  text-align: start;
+  font-family: inherit;
+  transition: border-color 0.1s, background 0.1s;
+}
+
+.planning-transfer-scope-option:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.planning-correction-banner {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(61, 123, 212, 0.5);
+  background: rgba(18, 28, 45, 0.96);
+  color: var(--accent-text);
+  font-size: 11.5px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+
+.leaflet-tooltip.planning-map-tooltip {
+  padding: 6px 8px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+  background: rgba(20, 28, 39, 0.96);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}

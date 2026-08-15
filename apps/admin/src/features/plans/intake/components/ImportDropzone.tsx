@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+﻿import { useRef, useState } from 'react';
 
 import { LtrData } from '@/shared/ui';
 
@@ -41,16 +41,18 @@ export function ImportDropzone({ onFileSelected }: ImportDropzoneProps) {
         handleFile(event.dataTransfer.files[0]);
       }}
     >
-      <div className={['a01-drop-icon', dragOver ? 'active' : ''].filter(Boolean).join(' ')}>
+      <div className={['intake-drop-icon', dragOver ? 'active' : ''].filter(Boolean).join(' ')}>
         <Icon d={ICONS.upload} size={18} />
       </div>
       <div className="text-center">
         <div className="text-[13px] font-medium text-[var(--text-primary)]">
           فایل اکسل را اینجا رها کنید
         </div>
-        <div className="mt-1 text-xs text-[var(--text-secondary)]">یا کلیک کنید تا فایل انتخاب شود</div>
+        <div className="mt-1 text-xs text-[var(--text-secondary)]">
+          یا کلیک کنید تا فایل انتخاب شود
+        </div>
       </div>
-      <LtrData className="a01-ext-chip">.xlsx</LtrData>
+      <LtrData className="intake-extension-chip">.xlsx</LtrData>
       <input
         ref={inputRef}
         type="file"

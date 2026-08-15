@@ -1,4 +1,4 @@
-import type { A01PresentationStatus, A01StageKey } from '@/features/plans/a01-types';
+﻿import type { A01PresentationStatus, A01StageKey } from '@/features/plans/a01-types';
 import { A01_STAGE_LABELS, A01_STATUS_PRESENTATION } from '@/features/plans/presentation';
 import { StatusBadge } from '@/shared/ui';
 
@@ -8,5 +8,5 @@ export function PlanStatusBadge({ status }: { status: A01PresentationStatus }) {
 }
 
 export function StagePill({ stage }: { stage: A01StageKey }) {
-  return <span className="a01-stage-pill">{A01_STAGE_LABELS[stage]}</span>;
+  return <span className="plan-stage-pill">{A01_STAGE_LABELS[stage]}</span>;
 }

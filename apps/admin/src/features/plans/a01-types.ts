@@ -26,13 +26,9 @@ export type A01PresentationStatus =
 export type A01DownstreamRisk = 'none' | 'planning' | 'published';
 
 export type A01StructuralErrorKind =
-  | 'unreadable'
-  | 'empty'
-  | 'missing-columns'
-  | 'network'
-  | 'duplicate-file';
+  'unreadable' | 'empty' | 'missing-columns' | 'network' | 'duplicate-file';
 
-/** Parsed summary shown in A01 only — issue resolution belongs to A02. */
+/** Parsed summary shown during Intake only — issue resolution belongs to Review. */
 export type A01ParseSummary = {
   totalRows: number;
   importedCount: number;

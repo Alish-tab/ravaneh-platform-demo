@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import type { A01PlanViewModel, A01StageKey } from '@/features/plans/a01-types';
@@ -14,7 +14,7 @@ import {
 import { PlansToolbar } from '@/features/plans/components/PlansToolbar';
 import { usePlansDataPort } from '@/features/plans/fixture/usePlansFixture';
 import { usePlansList } from '@/features/plans/hooks/usePlansData';
-import '@/features/plans/styles/a01.css';
+import '@/features/plans/styles/plans.css';
 
 export function PlansPage() {
   const navigate = useNavigate();
@@ -27,10 +27,7 @@ export function PlansPage() {
   const [editingPlan, setEditingPlan] = useState<A01PlanViewModel | null>(null);
   const [deletingPlan, setDeletingPlan] = useState<A01PlanViewModel | null>(null);
 
-  const plans = useMemo(
-    () => (state.status === 'ready' ? state.plans : []),
-    [state],
-  );
+  const plans = useMemo(() => (state.status === 'ready' ? state.plans : []), [state]);
 
   const filteredPlans = useMemo(() => {
     return plans.filter((plan) => {
@@ -46,11 +43,19 @@ export function PlansPage() {
   }, [plans, search, stageFilter]);
 
   const openPlan = (plan: A01PlanViewModel) => {
+    if (plan.currentStage === 'review') {
+      navigate(`/plans/${plan.id}/review`);
+      return;
+    }
+    if (plan.currentStage === 'planning' || plan.currentStage === 'execution') {
+      navigate(`/plans/${plan.id}/planning`);
+      return;
+    }
     navigate(`/plans/${plan.id}/intake`);
   };
 
   return (
-    <div className="a01-page">
+    <div className="plan-workspace-page">
       <PlansToolbar
         search={search}
         onSearch={setSearch}

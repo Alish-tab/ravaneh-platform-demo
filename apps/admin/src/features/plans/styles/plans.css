@@ -1,0 +1,135 @@
+﻿/* Plans list and plan metadata presentation. */
+.plans-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  padding: 12px 20px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.plans-toolbar-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--border-subtle);
+  flex-shrink: 0;
+  margin-inline: 2px;
+}
+
+.plans-centered {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plans-state-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.plans-state-icon-error {
+  background: var(--error-muted);
+  border-color: rgba(196, 68, 68, 0.3);
+  color: var(--error-text);
+}
+
+.plan-stage-pill {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: var(--r-xs);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  white-space: nowrap;
+}
+
+.badge-count {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-xs);
+  padding: 1px 6px;
+}
+
+.seg-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+}
+
+.seg-opt {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-primary);
+  font-size: 12px;
+  padding: 4px 9px;
+  border-radius: var(--r-xs);
+  cursor: pointer;
+}
+
+.seg-opt.active {
+  background: var(--accent-dim);
+  color: var(--accent-text);
+}
+
+.seg-opt:hover:not(.active) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 0%,
+    var(--bg-hover) 50%,
+    var(--bg-surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: plans-skeleton 1.2s ease-in-out infinite;
+  border-radius: 3px;
+}
+
+@keyframes plans-skeleton {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.plan-window-chip {
+  flex: 1;
+  padding: 5px 4px;
+  border-radius: var(--r-xs);
+  font-size: 12px;
+  font-family: var(--font-primary);
+  border: 1px solid var(--border-default);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.plan-window-chip.selected {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  color: var(--accent-text);
+}
