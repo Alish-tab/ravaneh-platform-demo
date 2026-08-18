@@ -10,7 +10,7 @@ describe('A04 execution workspace', () => {
     const { router } = renderExecution();
     await screen.findByRole('button', { name: /محدوده ۱/ });
     expect(router.state.location.pathname).toBe('/plans/P-2403/execution');
-    expect(screen.getByRole('button', { current: 'step' })).toHaveTextContent('اجرا');
+    expect(screen.getByRole('link', { current: 'page', name: 'اجرا و پیگیری' })).toBeInTheDocument();
     expect(screen.queryByText('A04 — STATE EXPLORER')).not.toBeInTheDocument();
     expect(screen.queryByText('MAP REFERENCE · A04')).not.toBeInTheDocument();
   });
