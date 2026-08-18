@@ -1,30 +1,19 @@
 import type { StatusTone } from '@/shared/ui';
 
-import type { A01PresentationStatus, A01StageKey } from '@/features/plans/a01-types';
-
-export const A01_PLAN_STAGES: { key: A01StageKey; label: string; num: number }[] = [
-  { key: 'intake', label: 'ورود داده', num: 1 },
-  { key: 'review', label: 'بررسی داده', num: 2 },
-  { key: 'planning', label: 'برنامه‌ریزی و تخصیص', num: 3 },
-  { key: 'execution', label: 'اجرا', num: 4 },
-];
-
-export const A01_STAGE_FILTER_OPTIONS: { key: A01StageKey | 'all'; label: string }[] = [
-  { key: 'all', label: 'همه' },
-  { key: 'intake', label: 'ورود داده' },
-  { key: 'review', label: 'بررسی' },
-  { key: 'planning', label: 'برنامه‌ریزی' },
-  { key: 'execution', label: 'اجرا' },
-];
+import type {
+  A01PresentationStatus,
+  A01StageKey,
+  MergeStrategy,
+  PlanLifecycle,
+} from '@/features/plans/a01-types';
 
 export const A01_STAGE_LABELS: Record<A01StageKey, string> = {
-  intake: 'ورود داده',
+  intake: 'داده‌های برنامه',
   review: 'بررسی داده',
   planning: 'برنامه‌ریزی',
   execution: 'اجرا',
 };
 
-/** Maps A01 presentation status → StatusBadge tone + Persian label. */
 export const A01_STATUS_PRESENTATION: Record<
   A01PresentationStatus,
   { label: string; tone: StatusTone; pulse?: boolean }
@@ -41,6 +30,37 @@ export const A01_STATUS_PRESENTATION: Record<
 };
 
 export const A01_DELIVERY_WINDOWS = ['۹ تا ۱۲', '۱۲ تا ۱۵', '۱۵ تا ۱۸', '۱۸ تا ۲۱'] as const;
+
+export const PLAN_LIFECYCLE_PRESENTATION: Record<
+  PlanLifecycle,
+  { label: string; compactLabel: string; tone: StatusTone; pulse?: boolean }
+> = {
+  draft: { label: 'پیش‌نویس', compactLabel: 'پیش‌نویس', tone: 'neutral' },
+  readyToPublish: { label: 'آماده انتشار', compactLabel: 'آماده انتشار', tone: 'success' },
+  published: { label: 'منتشرشده / آماده اجرا', compactLabel: 'منتشرشده', tone: 'success' },
+  inProgress: { label: 'در حال اجرا', compactLabel: 'در حال اجرا', tone: 'accent', pulse: true },
+  completed: { label: 'تکمیل‌شده', compactLabel: 'تکمیل‌شده', tone: 'neutral' },
+};
+
+export const MERGE_STRATEGY_COPY: Record<
+  MergeStrategy,
+  { title: string; body: string; recommended?: boolean; destructive?: boolean }
+> = {
+  'add-only': {
+    title: 'افزودن سفارش‌های جدید',
+    body: 'سفارش‌های جدید اضافه می‌شوند. سفارش‌های موجود و غایب بدون تغییر می‌مانند.',
+  },
+  'update-preserve': {
+    title: 'به‌روزرسانی داده‌های فعلی',
+    body: 'سفارش‌های جدید اضافه و سفارش‌های تغییر یافته به‌روز می‌شوند. موارد غایب حفظ می‌شوند.',
+    recommended: true,
+  },
+  'full-replace': {
+    title: 'جایگزینی کامل با فایل جدید',
+    body: 'سفارش‌های غایب از نسخه کاری فعلی حذف می‌شوند. سفارش‌های بدون تغییر و سوابق بررسی حفظ می‌شوند.',
+    destructive: true,
+  },
+};
 
 export const A01_STRUCTURAL_ERROR_COPY: Record<
   string,
@@ -62,8 +82,8 @@ export const A01_STRUCTURAL_ERROR_COPY: Record<
     title: 'بارگذاری فایل انجام نشد',
     body: 'اتصال قطع شد. اتصال اینترنت را بررسی کرده و دوباره تلاش کنید.',
   },
-  'duplicate-file': {
-    title: 'این فایل قبلاً برای این برنامه بارگذاری شده است',
-    body: 'فایل یکسانی قبلاً پردازش شده است. اگر داده‌ها تغییر کرده، فایل جدیدی با محتوای متفاوت بارگذاری کنید.',
+  'invalid-type': {
+    title: 'نوع فایل پشتیبانی نمی‌شود',
+    body: 'فقط فایل اکسل با پسوند xlsx یا xls قابل بارگذاری است.',
   },
 };

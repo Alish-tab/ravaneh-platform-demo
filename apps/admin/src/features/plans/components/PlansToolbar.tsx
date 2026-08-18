@@ -1,49 +1,61 @@
 ﻿import { toPersianDigits } from '@/shared/lib/format';
 import { Button, Input } from '@/shared/ui';
 
-import type { A01StageKey } from '@/features/plans/a01-types';
+import type { PlansListView } from '@/features/plans/a01-types';
 import { Icon, ICONS } from '@/features/plans/components/icons';
-import { A01_STAGE_FILTER_OPTIONS } from '@/features/plans/presentation';
 
 type PlansToolbarProps = {
   search: string;
   onSearch: (value: string) => void;
-  stageFilter: A01StageKey | 'all';
-  onStageFilter: (value: A01StageKey | 'all') => void;
+  view: PlansListView;
+  onView: (value: PlansListView) => void;
   onCreatePlan: () => void;
-  totalCount: number;
-  filteredCount: number;
+  preparingCount: number;
+  allCount: number;
 };
 
 export function PlansToolbar({
   search,
   onSearch,
-  stageFilter,
-  onStageFilter,
+  view,
+  onView,
   onCreatePlan,
-  totalCount,
-  filteredCount,
+  preparingCount,
+  allCount,
 }: PlansToolbarProps) {
-  const filtered = search.trim().length > 0 || stageFilter !== 'all';
+  const views: { key: PlansListView; label: string; count: number }[] = [
+    { key: 'preparing', label: 'در حال آماده‌سازی', count: preparingCount },
+    { key: 'all', label: 'همه برنامه‌ها', count: allCount },
+  ];
 
   return (
     <div className="plans-toolbar">
-      <div className="shrink-0">
-        <h1 className="text-[15px] leading-tight font-bold tracking-tight text-[var(--text-primary)]">
-          برنامه‌ها
-        </h1>
-        <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">
-          {filtered
-            ? `${toPersianDigits(filteredCount)} از ${toPersianDigits(totalCount)} برنامه`
-            : `${toPersianDigits(totalCount)} برنامه`}
-        </p>
+      <div className="plans-view-tabs" role="tablist" aria-label="نمای برنامه‌ها">
+        {views.map((opt) => {
+          const selected = view === opt.key;
+          return (
+            <button
+              key={opt.key}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              className={['plans-view-tab', selected ? 'active' : ''].filter(Boolean).join(' ')}
+              onClick={() => onView(opt.key)}
+            >
+              {opt.label}
+              <span className={['plans-count-pill', selected ? 'active' : ''].filter(Boolean).join(' ')}>
+                {toPersianDigits(opt.count)}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="plans-toolbar-divider" />
 
-      <div className="input-wrap w-[220px]">
+      <div className="input-wrap w-[200px] self-center">
         <Input
-          className="input-search h-[30px] text-xs"
+          className="input-search h-7 text-xs"
           placeholder="جستجو — نام یا شناسه…"
           value={search}
           onChange={(event) => onSearch(event.target.value)}
@@ -54,23 +66,7 @@ export function PlansToolbar({
         </span>
       </div>
 
-      <div className="seg-control" role="group" aria-label="فیلتر مرحله">
-        {A01_STAGE_FILTER_OPTIONS.map((opt) => (
-          <button
-            key={opt.key}
-            type="button"
-            className={['seg-opt', stageFilter === opt.key ? 'active' : '']
-              .filter(Boolean)
-              .join(' ')}
-            aria-pressed={stageFilter === opt.key}
-            onClick={() => onStageFilter(opt.key)}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="ms-auto">
+      <div className="ms-auto flex items-center">
         <Button variant="primary" size="sm" onClick={onCreatePlan}>
           <Icon d={ICONS.plus} size={12} />
           برنامه جدید

@@ -1,11 +1,12 @@
-﻿import { useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import type { A01PlanViewModel, A01StageKey } from '@/features/plans/a01-types';
+import type { A01PlanViewModel, PlansListView } from '@/features/plans/a01-types';
 import { CreatePlanDialog } from '@/features/plans/components/CreatePlanDialog';
 import { DeleteDraftDialog, EditPlanDialog } from '@/features/plans/components/PlanMetaDialogs';
 import { PlansTable } from '@/features/plans/components/PlansTable';
 import {
+  PlansAllReadyState,
   PlansEmptyState,
   PlansErrorState,
   PlansLoadingState,
@@ -15,6 +16,8 @@ import { PlansToolbar } from '@/features/plans/components/PlansToolbar';
 import { usePlansDataPort } from '@/features/plans/fixture/usePlansFixture';
 import { usePlansList } from '@/features/plans/hooks/usePlansData';
 import { planStagePath } from '@/features/plans/plan-stage-path';
+import { PROGRAMS_PAGE_SIZE, queryGroupedPlans } from '@/features/plans/query-plans';
+import { toServiceDateSortKey } from '@/features/plans/plan-name';
 import '@/features/plans/styles/plans.css';
 
 export function PlansPage() {
@@ -23,40 +26,51 @@ export function PlansPage() {
   const { state, reload } = usePlansList();
 
   const [search, setSearch] = useState('');
-  const [stageFilter, setStageFilter] = useState<A01StageKey | 'all'>('all');
+  const [view, setView] = useState<PlansListView>('preparing');
+  const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<A01PlanViewModel | null>(null);
   const [deletingPlan, setDeletingPlan] = useState<A01PlanViewModel | null>(null);
 
   const plans = useMemo(() => (state.status === 'ready' ? state.plans : []), [state]);
+  const referenceDate = port.getReferenceDate();
 
-  const filteredPlans = useMemo(() => {
-    return plans.filter((plan) => {
-      if (stageFilter !== 'all' && plan.currentStage !== stageFilter) return false;
-      if (!search.trim()) return true;
-      const q = search.trim().toLowerCase();
-      return (
-        plan.name.includes(search.trim()) ||
-        plan.id.toLowerCase().includes(q) ||
-        plan.deliveryDate.includes(search.trim())
-      );
-    });
-  }, [plans, search, stageFilter]);
+  const queried = useMemo(
+    () =>
+      queryGroupedPlans(
+        plans,
+        { search, view, page, pageSize: PROGRAMS_PAGE_SIZE },
+        referenceDate,
+      ),
+    [plans, search, view, page, referenceDate],
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, view]);
 
   const openPlan = (plan: A01PlanViewModel) => {
-    navigate(planStagePath(plan.id, plan.currentStage));
+    navigate(planStagePath(plan.id, plan.suggestedSection));
   };
+
+  const preparingEmpty = state.status === 'ready' && plans.length > 0 && queried.preparingCount === 0;
+  const noResults =
+    state.status === 'ready' &&
+    plans.length > 0 &&
+    !(view === 'preparing' && preparingEmpty) &&
+    queried.total === 0;
 
   return (
     <div className="plan-workspace-page">
+      <h1 className="sr-only">برنامه‌ها</h1>
       <PlansToolbar
         search={search}
         onSearch={setSearch}
-        stageFilter={stageFilter}
-        onStageFilter={setStageFilter}
+        view={view}
+        onView={setView}
         onCreatePlan={() => setCreateOpen(true)}
-        totalCount={plans.length}
-        filteredCount={filteredPlans.length}
+        preparingCount={queried.preparingCount}
+        allCount={queried.allCount}
       />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -65,22 +79,31 @@ export function PlansPage() {
         {state.status === 'ready' && plans.length === 0 ? (
           <PlansEmptyState onCreatePlan={() => setCreateOpen(true)} />
         ) : null}
-        {state.status === 'ready' && plans.length > 0 && filteredPlans.length === 0 ? (
+        {state.status === 'ready' && view === 'preparing' && preparingEmpty ? (
+          <PlansAllReadyState onViewAll={() => setView('all')} />
+        ) : null}
+        {noResults ? (
           <PlansNoResults
             search={search}
-            stageFilter={stageFilter}
             onClear={() => {
               setSearch('');
-              setStageFilter('all');
+              setView('all');
             }}
           />
         ) : null}
-        {state.status === 'ready' && filteredPlans.length > 0 ? (
+        {state.status === 'ready' && queried.items.length > 0 ? (
           <PlansTable
-            plans={filteredPlans}
+            sections={queried.pageSections}
+            view={view}
             onOpenPlan={openPlan}
             onEditMeta={setEditingPlan}
             onDeleteDraft={setDeletingPlan}
+            page={queried.page}
+            pageCount={queried.pageCount}
+            startItem={queried.startItem}
+            endItem={queried.endItem}
+            totalItems={queried.total}
+            onPage={setPage}
           />
         ) : null}
       </div>
@@ -89,7 +112,10 @@ export function PlansPage() {
         <CreatePlanDialog
           onCancel={() => setCreateOpen(false)}
           onSubmit={async (values) => {
-            const created = await port.createPlan(values);
+            const created = await port.createPlan({
+              ...values,
+              deliveryDate: values.deliveryDate,
+            });
             setCreateOpen(false);
             navigate(`/plans/${created.id}/intake`);
           }}
@@ -99,13 +125,11 @@ export function PlansPage() {
       {editingPlan ? (
         <EditPlanDialog
           plan={editingPlan}
-          isDownstreamLocked={
-            editingPlan.currentStage === 'planning' || editingPlan.currentStage === 'execution'
-          }
           onCancel={() => setEditingPlan(null)}
           onSave={async (updates) => {
             await port.updatePlan(editingPlan.id, {
               ...updates,
+              serviceDateSortKey: toServiceDateSortKey(updates.deliveryDate),
               lastChanged: 'همین الان',
             });
             setEditingPlan(null);

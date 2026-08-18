@@ -1,8 +1,6 @@
 ﻿import { Button } from '@/shared/ui';
 
-import type { A01StageKey } from '@/features/plans/a01-types';
 import { Icon, ICONS } from '@/features/plans/components/icons';
-import { A01_STAGE_LABELS } from '@/features/plans/presentation';
 
 export function PlansEmptyState({ onCreatePlan }: { onCreatePlan: () => void }) {
   return (
@@ -27,20 +25,12 @@ export function PlansEmptyState({ onCreatePlan }: { onCreatePlan: () => void }) 
   );
 }
 
-export function PlansNoResults({
-  search,
-  stageFilter,
-  onClear,
-}: {
-  search: string;
-  stageFilter: A01StageKey | 'all';
-  onClear: () => void;
-}) {
+export function PlansNoResults({ search, onClear }: { search: string; onClear: () => void }) {
   return (
     <div className="plans-centered">
       <div className="max-w-[320px] px-6 text-center">
         <h2 className="mb-2 text-sm font-semibold text-[var(--text-primary)]">
-          برنامه‌ای با این فیلتر پیدا نشد
+          برنامه‌ای با این جستجو پیدا نشد
         </h2>
         <p className="mb-4 text-[12.5px] leading-7 text-[var(--text-secondary)]">
           {search ? (
@@ -48,11 +38,31 @@ export function PlansNoResults({
               جستجو برای «<span className="text-[var(--text-primary)]">{search}</span>»{' '}
             </>
           ) : null}
-          {stageFilter !== 'all' ? <>در مرحله «{A01_STAGE_LABELS[stageFilter]}» </> : null}
-          نتیجه‌ای برنگرداند. فیلترها را پاک کنید و دوباره امتحان کنید.
+          نتیجه‌ای برنگرداند. جستجو را پاک کنید و دوباره امتحان کنید.
         </p>
         <Button variant="secondary" size="sm" onClick={onClear}>
-          پاک کردن فیلترها
+          پاک کردن جستجو
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function PlansAllReadyState({ onViewAll }: { onViewAll: () => void }) {
+  return (
+    <div className="plans-centered">
+      <div className="max-w-[320px] px-6 text-center">
+        <div className="plans-state-icon plans-state-icon-success mx-auto mb-4">
+          <Icon d={ICONS.check_circle} size={18} />
+        </div>
+        <h2 className="mb-1.5 text-sm font-semibold text-[var(--text-primary)]">
+          همه برنامه‌ها آماده‌اند
+        </h2>
+        <p className="mb-5 text-[12.5px] leading-7 text-[var(--text-secondary)]">
+          در حال حاضر برنامه‌ای نیازمند آماده‌سازی نیست.
+        </p>
+        <Button variant="secondary" size="sm" onClick={onViewAll}>
+          مشاهده همه برنامه‌ها
         </Button>
       </div>
     </div>
@@ -87,11 +97,11 @@ export function PlansLoadingState() {
       <table className="data-table w-full">
         <thead>
           <tr>
-            <th>نام برنامه</th>
-            <th>تاریخ تحویل</th>
-            <th>موارد تحویل</th>
-            <th>مرحله جاری</th>
-            <th>وضعیت</th>
+            <th className="ps-4">برنامه</th>
+            <th>بازه تحویل</th>
+            <th>سفارش‌ها</th>
+            <th>وضعیت برنامه</th>
+            <th>نیازمند اقدام</th>
             <th>آخرین تغییر</th>
             <th style={{ width: 32 }} />
           </tr>
@@ -99,20 +109,20 @@ export function PlansLoadingState() {
         <tbody>
           {Array.from({ length: 5 }).map((_, index) => (
             <tr key={index}>
-              <td>
+              <td className="ps-4">
                 <div className="skeleton" style={{ height: 14, width: `${120 + index * 20}px` }} />
               </td>
               <td>
-                <div className="skeleton" style={{ height: 12, width: 80 }} />
+                <div className="skeleton" style={{ height: 12, width: 90 }} />
               </td>
               <td>
                 <div className="skeleton" style={{ height: 12, width: 36 }} />
               </td>
               <td>
-                <div className="skeleton" style={{ height: 18, width: 80 }} />
+                <div className="skeleton" style={{ height: 18, width: 90, borderRadius: 10 }} />
               </td>
               <td>
-                <div className="skeleton" style={{ height: 18, width: 90, borderRadius: 10 }} />
+                <div className="skeleton" style={{ height: 18, width: 110 }} />
               </td>
               <td>
                 <div className="skeleton" style={{ height: 12, width: 60 }} />

@@ -1,39 +1,40 @@
 ﻿import { useEffect, useRef, useState } from 'react';
-import {
-  Link,
-  useNavigate,
-  useParams,
-  useSearchParams,
-} from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { Button, InlineMessage } from '@/shared/ui';
 
+import type { DatasetDiffViewModel, MergeStrategy } from '@/features/plans/a01-types';
 import { PlanContextHeader } from '@/features/plans/components/PlanContextHeader';
-import { usePlansDataPort } from '@/features/plans/fixture/usePlansFixture';
 import {
-  buildParsedImportedFile,
-  statusAfterParse,
+  fixtureParseOutcomeFromFileName,
+  parsedBatchFromFile,
 } from '@/features/plans/fixture/plans-fixture';
+import { usePlansDataPort } from '@/features/plans/fixture/usePlansFixture';
 import { usePlan } from '@/features/plans/hooks/usePlansData';
 import { ImportDropzone } from '@/features/plans/intake/components/ImportDropzone';
 import {
-  CurrentFileSummary,
+  A01ModeChip,
+  ApplyFailedState,
+  ApplySuccessState,
+  ApplyingState,
+  CompletedReadonlyBanner,
+  DatasetActivePanel,
+  DiffReadyPanel,
+  ExecutionLockedBanner,
   ImportCleanState,
   ImportResultSummary,
   ProcessingState,
-  ReplaceDatasetConfirm,
-  ReplacementUploadFailedState,
   SelectedFilePanel,
   StaleDataBanner,
   StructuralErrorState,
   UploadFailedState,
   UploadProgressState,
+  WorkingVersionBanner,
 } from '@/features/plans/intake/components/IntakePanels';
 import {
   deriveInitialIntakeState,
-  fixtureParseOutcomeFromFileName,
-  fixtureShouldFailUpload,
-  fixtureStructuralErrorFromFileName,
+  fileTypeFromName,
+  hasWorkingDataset,
   type IntakeViewState,
 } from '@/features/plans/intake/intake-state';
 import { formatFileSizeLabel } from '@/features/plans/plan-name';
@@ -46,204 +47,119 @@ export function PlanIntakePage() {
   const port = usePlansDataPort();
   const { plan, status, reload } = usePlan(planId);
 
-  const [viewState, setViewState] = useState<IntakeViewState>({
-    kind: 'idle',
-  });
+  const [viewState, setViewState] = useState<IntakeViewState>({ kind: 'idle' });
   const [staleDismissed, setStaleDismissed] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [isReplacing, setIsReplacing] = useState(false);
-
-  const timerRef = useRef<number | null>(null);
-  const processTimerRef = useRef<number | null>(null);
   const initializedForId = useRef<string | null>(null);
-
-  const clearTimers = () => {
-    if (timerRef.current !== null) {
-      window.clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-
-    if (processTimerRef.current !== null) {
-      window.clearTimeout(processTimerRef.current);
-      processTimerRef.current = null;
-    }
-  };
-
-  useEffect(() => () => clearTimers(), []);
 
   useEffect(() => {
     if (status !== 'ready' || !plan) return;
     if (initializedForId.current === plan.id) return;
-
     initializedForId.current = plan.id;
     setViewState(deriveInitialIntakeState(plan));
     setStaleDismissed(false);
   }, [plan, status]);
 
   const showStale =
-    searchParams.get('stale') === '1' && !staleDismissed;
+    !staleDismissed &&
+    Boolean(plan && (port.isStale(plan.id) || searchParams.get('stale') === '1'));
 
-  const goToReviewHandoff = () => {
-    if (planId) {
-      navigate(`/plans/${planId}/review`);
-    }
+  const goToReview = () => {
+    if (planId) navigate(`/plans/${planId}/review`);
   };
 
-  const finishParse = async (
-    fileName: string,
-    replacement: boolean,
-  ) => {
+  const goToPlanning = () => {
+    if (planId) navigate(`/plans/${planId}/planning`);
+  };
+
+  const backToDataset = () => {
+    setPendingFile(null);
+    setViewState(plan && hasWorkingDataset(plan) ? { kind: 'dataset-active' } : { kind: 'idle' });
+  };
+
+  const startUpload = async (file: File) => {
     if (!plan) return;
+    const isUpdate = hasWorkingDataset(plan);
+    setPendingFile(file);
+    setViewState({ kind: 'uploading', progress: 100, fileName: file.name, isUpdate });
 
-    const previousFile = plan.importedFile;
-    const structural =
-      fixtureStructuralErrorFromFileName(fileName);
-
-    if (structural) {
-      if (replacement && previousFile) {
-        // Preserve previous dataset visually — Backend mutation semantics deferred.
-        setViewState({
-          kind: 'replacement-upload-failed',
-          previousFile,
-        });
-        setIsReplacing(false);
-        return;
-      }
-
-      await port.updatePlan(plan.id, {
-        status: 'intake_failed',
-        lastChanged: 'همین الان',
-      });
-
-      setViewState({
-        kind: 'structural-error',
-        errorType: structural,
-      });
-
-      setIsReplacing(false);
+    const inspect = port.inspectUpload(file.name);
+    if (inspect.kind === 'fail-upload') {
+      setViewState({ kind: 'upload-failed', fileName: file.name, isUpdate });
       return;
     }
 
-    const outcome =
-      fixtureParseOutcomeFromFileName(fileName);
+    setViewState({ kind: 'processing', fileName: file.name, isUpdate });
 
-    const importedFile = buildParsedImportedFile({
-      fileName,
+    if (inspect.kind === 'structural') {
+      setViewState({ kind: 'structural-error', errorType: inspect.error, isUpdate });
+      return;
+    }
+
+    if (isUpdate) {
+      const diff = port.getDatasetDiff(file.name);
+      setViewState({
+        kind: 'diff-ready',
+        fileName: file.name,
+        diff,
+        strategy: 'update-preserve',
+        confirmReplace: false,
+      });
+      return;
+    }
+
+    const outcome = fixtureParseOutcomeFromFileName(file.name);
+    const next = await port.applyImportBatch(
+      plan.id,
+      parsedBatchFromFile(file.name, outcome),
       outcome,
-    });
-
-    await port.updatePlan(plan.id, {
-      status: statusAfterParse(outcome),
-      currentStage: 'review',
-      itemCount: importedFile.rowCount,
-      importedFile,
-      lastChanged: 'همین الان',
-    });
-
-    setIsReplacing(false);
-
+    );
     setViewState(
       outcome === 'clean'
-        ? { kind: 'import-clean' }
-        : { kind: 'import-result' },
+        ? { kind: 'import-clean', importedFile: next.importedFile! }
+        : { kind: 'import-result', importedFile: next.importedFile! },
     );
   };
 
-  const startUpload = (
-    file: File,
-    replacement: boolean,
+  const applyStrategy = async (
+    strategy: MergeStrategy,
+    fileName: string,
+    diff: DatasetDiffViewModel,
   ) => {
-    clearTimers();
-    setPendingFile(file);
-
-    if (fixtureShouldFailUpload(file.name)) {
-      if (replacement && plan?.importedFile) {
-        setViewState({
-          kind: 'replacement-upload-failed',
-          previousFile: plan.importedFile,
-        });
-      } else {
-        setViewState({
-          kind: 'upload-failed',
-          fileName: file.name,
-          isReplacement: replacement,
-        });
+    if (!plan) return;
+    const previousCount = plan.itemCount;
+    setViewState({ kind: 'applying', strategy, fileName, diff });
+    try {
+      const outcome = fixtureParseOutcomeFromFileName(fileName);
+      await port.applyDatasetStrategy(
+        plan.id,
+        strategy,
+        diff,
+        parsedBatchFromFile(fileName, outcome),
+      );
+      setViewState({ kind: 'apply-success', strategy });
+    } catch {
+      if (previousCount !== undefined) {
+        /* dataset remains unchanged in the fixture port on failure */
       }
-
-      return;
+      setViewState({ kind: 'apply-failed', strategy, fileName, diff });
     }
-
-    setViewState({
-      kind: 'uploading',
-      progress: 0,
-      fileName: file.name,
-      isReplacement: replacement,
-    });
-
-    void port.updatePlan(plan!.id, {
-      status: 'uploading',
-      lastChanged: 'همین الان',
-    });
-
-    let prog = 0;
-
-    timerRef.current = window.setInterval(() => {
-      prog += 18 + Math.random() * 12;
-
-      if (prog >= 100) {
-        clearTimers();
-
-        setViewState({
-          kind: 'processing',
-          fileName: file.name,
-          isReplacement: replacement,
-        });
-
-        void port.updatePlan(plan!.id, {
-          status: 'process',
-          lastChanged: 'همین الان',
-        });
-
-        processTimerRef.current = window.setTimeout(() => {
-          void finishParse(file.name, replacement);
-        }, 700);
-      } else {
-        setViewState({
-          kind: 'uploading',
-          progress: prog,
-          fileName: file.name,
-          isReplacement: replacement,
-        });
-      }
-    }, 160);
   };
 
   const onFileSelected = (file: File) => {
-    if (!plan) return;
-
-    if (plan.importedFile?.name === file.name) {
-      setViewState({
-        kind: 'structural-error',
-        errorType: 'duplicate-file',
-      });
-      return;
-    }
-
     setPendingFile(file);
-
     setViewState({
       kind: 'file-selected',
       fileName: file.name,
       fileSize: formatFileSizeLabel(file.size),
+      fileType: fileTypeFromName(file.name),
     });
   };
 
   if (status === 'loading') {
     return (
       <div className="plan-workspace-page p-6">
-        <InlineMessage tone="info">
-          در حال بارگذاری برنامه…
-        </InlineMessage>
+        <InlineMessage tone="info">در حال بارگذاری برنامه…</InlineMessage>
       </div>
     );
   }
@@ -251,10 +167,7 @@ export function PlanIntakePage() {
   if (status === 'missing' || !plan) {
     return (
       <div className="plan-workspace-page flex flex-col items-start gap-3 p-6">
-        <InlineMessage tone="error">
-          برنامه یافت نشد.
-        </InlineMessage>
-
+        <InlineMessage tone="error">برنامه یافت نشد.</InlineMessage>
         <Link to="/plans">
           <Button variant="secondary" size="sm">
             بازگشت به برنامه‌ها
@@ -267,30 +180,48 @@ export function PlanIntakePage() {
   if (status === 'error') {
     return (
       <div className="plan-workspace-page flex flex-col items-start gap-3 p-6">
-        <InlineMessage tone="error">
-          بارگذاری برنامه ناموفق بود.
-        </InlineMessage>
-
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => void reload()}
-        >
+        <InlineMessage tone="error">بارگذاری برنامه ناموفق بود.</InlineMessage>
+        <Button variant="secondary" size="sm" onClick={() => void reload()}>
           تلاش مجدد
         </Button>
       </div>
     );
   }
 
-  const mockImported =
-    plan.importedFile ??
-    buildParsedImportedFile({
-      fileName: 'orders_demo.xlsx',
-      outcome:
-        viewState.kind === 'import-clean'
-          ? 'clean'
-          : 'needs_review',
-    });
+  const datasetFile = plan.importedFile;
+  const canMutate = plan.canMutateDataset;
+  const subtitle =
+    plan.a01Mode === 'published-readonly'
+      ? 'داده‌های منتشرشده — برای ویرایش نسخه کاری ایجاد کنید'
+      : plan.a01Mode === 'working'
+        ? 'نسخه کاری — این تغییرات هنوز برای رانندگان قابل مشاهده نیستند'
+        : plan.a01Mode === 'execution-locked'
+          ? 'داده‌های برنامه — فقط مشاهده'
+          : plan.a01Mode === 'completed-readonly'
+            ? 'داده‌های تاریخی — فقط مشاهده'
+            : hasWorkingDataset(plan)
+              ? 'مشاهده و به‌روزرسانی دیتاست سفارش‌های این برنامه'
+              : 'فایل اکسل داده‌های تحویل را بارگذاری کنید';
+
+  const inDeepFlow =
+    viewState.kind === 'file-selected' ||
+    viewState.kind === 'uploading' ||
+    viewState.kind === 'upload-failed' ||
+    viewState.kind === 'processing' ||
+    viewState.kind === 'structural-error' ||
+    viewState.kind === 'diff-ready' ||
+    viewState.kind === 'import-result' ||
+    viewState.kind === 'import-clean' ||
+    viewState.kind === 'applying' ||
+    viewState.kind === 'apply-failed' ||
+    viewState.kind === 'apply-success';
+
+  const showDataset =
+    Boolean(datasetFile) &&
+    (viewState.kind === 'dataset-active' ||
+      viewState.kind === 'idle' ||
+      (viewState.kind === 'structural-error' && viewState.isUpdate) ||
+      (viewState.kind === 'upload-failed' && viewState.isUpdate));
 
   return (
     <div className="plan-workspace-page">
@@ -302,119 +233,90 @@ export function PlanIntakePage() {
             <StaleDataBanner
               onRefresh={() => {
                 setStaleDismissed(true);
+                if (planId) port.markStale(planId, false);
                 void reload();
               }}
             />
           ) : null}
 
-          <div>
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-              ورود داده
-            </h2>
+          {plan.a01Mode === 'working' ? (
+            <WorkingVersionBanner onGoToPlanning={goToPlanning} />
+          ) : null}
+          {plan.a01Mode === 'execution-locked' ? <ExecutionLockedBanner /> : null}
+          {plan.a01Mode === 'completed-readonly' ? <CompletedReadonlyBanner /> : null}
 
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">
-              فایل اکسل داده‌های تحویل را بارگذاری کنید
-            </p>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-semibold text-[var(--text-primary)]">داده‌های برنامه</h2>
+                <A01ModeChip mode={plan.a01Mode} />
+              </div>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">{subtitle}</p>
+            </div>
           </div>
 
           <div className="divider" />
 
-          {viewState.kind === 'idle' ? (
-            <ImportDropzone
-              onFileSelected={onFileSelected}
+          {showDataset && datasetFile ? (
+            <DatasetActivePanel
+              importedFile={datasetFile}
+              a01Mode={plan.a01Mode}
+              onUploadNew={() => setViewState({ kind: 'idle' })}
+              onCreateWorkingVersion={
+                plan.a01Mode === 'published-readonly'
+                  ? () => {
+                      void port.createWorkingVersion(plan.id);
+                    }
+                  : undefined
+              }
             />
+          ) : null}
+
+          {viewState.kind === 'idle' && canMutate ? (
+            <ImportDropzone onFileSelected={onFileSelected} />
+          ) : null}
+
+          {viewState.kind === 'dataset-active' && canMutate ? (
+            <ImportDropzone onFileSelected={onFileSelected} />
           ) : null}
 
           {viewState.kind === 'file-selected' ? (
             <SelectedFilePanel
               fileName={viewState.fileName}
               fileSize={viewState.fileSize}
-              onRemove={() => {
-                setPendingFile(null);
-                setViewState({ kind: 'idle' });
-              }}
+              fileType={viewState.fileType}
+              onRemove={backToDataset}
               onUpload={() => {
-                if (pendingFile) {
-                  startUpload(
-                    pendingFile,
-                    isReplacing,
-                  );
-                }
+                if (pendingFile) void startUpload(pendingFile);
               }}
             />
           ) : null}
 
           {viewState.kind === 'uploading' ? (
-            <UploadProgressState
-              progress={viewState.progress}
-            />
+            <UploadProgressState progress={viewState.progress} />
           ) : null}
 
           {viewState.kind === 'upload-failed' ? (
             <UploadFailedState
               fileName={viewState.fileName}
               onRetry={() => {
-                if (pendingFile) {
-                  startUpload(
-                    pendingFile,
-                    viewState.isReplacement,
-                  );
-                }
+                if (pendingFile) void startUpload(pendingFile);
               }}
-              onSelectAnother={() => {
-                setPendingFile(null);
-
-                if (
-                  viewState.isReplacement &&
-                  plan.importedFile
-                ) {
-                  setViewState({
-                    kind: 'replacement-upload-failed',
-                    previousFile: plan.importedFile,
-                  });
-                } else {
-                  setViewState({
-                    kind: 'idle',
-                  });
-                }
-              }}
+              onSelectAnother={backToDataset}
             />
           ) : null}
 
-          {viewState.kind === 'processing' ? (
-            <ProcessingState />
-          ) : null}
+          {viewState.kind === 'processing' ? <ProcessingState /> : null}
 
           {viewState.kind === 'structural-error' ? (
-            <>
-              <StructuralErrorState
-                errorType={viewState.errorType}
-                onRetry={() =>
-                  setViewState({
-                    kind: 'idle',
-                  })
-                }
-              />
-
-              {plan.importedFile ? (
-                <CurrentFileSummary
-                  importedFile={plan.importedFile}
-                  downstreamRisk="none"
-                  onReplace={() =>
-                    setViewState({
-                      kind: 'idle',
-                    })
-                  }
-                />
-              ) : null}
-            </>
+            <StructuralErrorState errorType={viewState.errorType} onRetry={backToDataset} />
           ) : null}
 
           {viewState.kind === 'import-result' ? (
             <ImportResultSummary
-              importedFile={mockImported}
+              importedFile={viewState.importedFile}
               summary={
-                mockImported.parseSummary ?? {
+                viewState.importedFile.parseSummary ?? {
                   totalRows: 210,
                   importedCount: 210,
                   locationReviewCount: 23,
@@ -422,96 +324,59 @@ export function PlanIntakePage() {
                   otherReviewCount: 2,
                 }
               }
-              onContinueToReview={
-                goToReviewHandoff
-              }
+              onContinueToReview={goToReview}
             />
           ) : null}
 
           {viewState.kind === 'import-clean' ? (
-            <ImportCleanState
-              importedFile={mockImported}
-              onContinue={goToReviewHandoff}
+            <ImportCleanState importedFile={viewState.importedFile} onContinue={goToReview} />
+          ) : null}
+
+          {viewState.kind === 'diff-ready' ? (
+            <DiffReadyPanel
+              fileName={viewState.fileName}
+              diff={viewState.diff}
+              strategy={viewState.strategy}
+              confirmReplace={viewState.confirmReplace}
+              onStrategyChange={(strategy) =>
+                setViewState({ ...viewState, strategy, confirmReplace: false })
+              }
+              onApply={(strategy) => void applyStrategy(strategy, viewState.fileName, viewState.diff)}
+              onShowReplaceConfirm={() =>
+                setViewState({ ...viewState, strategy: 'full-replace', confirmReplace: true })
+              }
+              onCancelReplace={() =>
+                setViewState({ ...viewState, strategy: 'update-preserve', confirmReplace: false })
+              }
+              onBack={backToDataset}
             />
           ) : null}
 
-          {viewState.kind === 'has-file' &&
-          plan.importedFile ? (
-            <CurrentFileSummary
-              importedFile={plan.importedFile}
-              downstreamRisk={
-                viewState.downstreamRisk
+          {viewState.kind === 'applying' ? <ApplyingState /> : null}
+
+          {viewState.kind === 'apply-failed' ? (
+            <ApplyFailedState
+              onRetry={() =>
+                void applyStrategy(viewState.strategy, viewState.fileName, viewState.diff)
               }
-              onReplace={() =>
+              onBack={() =>
                 setViewState({
-                  kind: 'replace-confirm',
-                  downstreamRisk:
-                    viewState.downstreamRisk,
+                  kind: 'diff-ready',
+                  fileName: viewState.fileName,
+                  diff: viewState.diff,
+                  strategy: viewState.strategy,
+                  confirmReplace: false,
                 })
               }
             />
           ) : null}
 
-          {viewState.kind === 'replace-confirm' ? (
-            <>
-              {plan.importedFile ? (
-                <CurrentFileSummary
-                  importedFile={plan.importedFile}
-                  downstreamRisk={
-                    viewState.downstreamRisk
-                  }
-                  onReplace={() => undefined}
-                />
-              ) : null}
-
-              <ReplaceDatasetConfirm
-                downstreamRisk={
-                  viewState.downstreamRisk
-                }
-                onCancel={() =>
-                  setViewState({
-                    kind: 'has-file',
-                    downstreamRisk:
-                      viewState.downstreamRisk,
-                  })
-                }
-                onConfirm={() => {
-                  /**
-                   * Fixture UI: enter replacement selection without destroying previous file yet.
-                   * Successful parse replaces the dataset. Upload/parse failure keeps previous file.
-                   * Final Backend mutation semantics remain deferred to OpenAPI.
-                   */
-                  setIsReplacing(true);
-                  setPendingFile(null);
-                  setViewState({
-                    kind: 'idle',
-                  });
-                }}
-              />
-            </>
+          {viewState.kind === 'apply-success' ? (
+            <ApplySuccessState strategy={viewState.strategy} onContinue={goToReview} />
           ) : null}
 
-          {viewState.kind ===
-          'replacement-upload-failed' ? (
-            <ReplacementUploadFailedState
-              previousFile={
-                viewState.previousFile
-              }
-              onRetry={() => {
-                if (pendingFile) {
-                  startUpload(
-                    pendingFile,
-                    true,
-                  );
-                }
-              }}
-              onSelectAnother={() => {
-                setIsReplacing(true);
-                setViewState({
-                  kind: 'idle',
-                });
-              }}
-            />
+          {!canMutate && !inDeepFlow && !datasetFile ? (
+            <InlineMessage tone="info">این برنامه دیتاست قابل ویرایشی ندارد.</InlineMessage>
           ) : null}
         </div>
       </div>
