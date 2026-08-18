@@ -71,7 +71,7 @@ export function usePlan(planId: string | undefined) {
       setPlan(null);
       return;
     }
-    setStatus('loading');
+    setStatus((current) => (current === 'ready' ? current : 'loading'));
     try {
       const next = await port.getPlan(planId);
       if (!next) {
@@ -96,7 +96,9 @@ export function usePlan(planId: string | undefined) {
         }
         return;
       }
-      if (!cancelled) setStatus('loading');
+      if (!cancelled) {
+        setStatus((current) => (current === 'ready' ? current : 'loading'));
+      }
       try {
         const next = await port.getPlan(planId);
         if (cancelled) return;

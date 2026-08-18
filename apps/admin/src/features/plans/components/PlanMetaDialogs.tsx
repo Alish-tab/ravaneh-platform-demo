@@ -9,25 +9,20 @@ import { A01_DELIVERY_WINDOWS } from '@/features/plans/presentation';
 
 type EditPlanDialogProps = {
   plan: A01PlanViewModel;
-  isDownstreamLocked: boolean;
   onSave: (updates: { name: string; deliveryDate: string; window?: string }) => Promise<void>;
   onCancel: () => void;
 };
 
-export function EditPlanDialog({
-  plan,
-  isDownstreamLocked,
-  onSave,
-  onCancel,
-}: EditPlanDialogProps) {
+export function EditPlanDialog({ plan, onSave, onCancel }: EditPlanDialogProps) {
   const [name, setName] = useState(plan.name);
   const [deliveryDate, setDeliveryDate] = useState(plan.deliveryDate);
   const [windowValue, setWindowValue] = useState(plan.window ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const locked = !plan.canEditMetadata;
 
   const submit = async () => {
-    if (!name.trim() || !deliveryDate.trim() || saving) return;
+    if (!name.trim() || !deliveryDate.trim() || saving || locked) return;
     setSaving(true);
     setError(null);
     try {
@@ -60,7 +55,7 @@ export function EditPlanDialog({
           <Button
             variant="primary"
             loading={saving}
-            disabled={!name.trim() || !deliveryDate.trim()}
+            disabled={locked || !name.trim() || !deliveryDate.trim()}
             onClick={() => void submit()}
           >
             ذخیره
@@ -69,10 +64,9 @@ export function EditPlanDialog({
       }
     >
       <div className="flex flex-col gap-3.5">
-        {isDownstreamLocked ? (
+        {locked ? (
           <InlineMessage tone="warning">
-            این برنامه در مرحله برنامه‌ریزی یا اجراست. تغییر مشخصات فقط روی نمایش اثر می‌گذارد و
-            قوانین نهایی Backend هنوز تعریف نشده‌اند.
+            مشخصات این برنامه در وضعیت فعلی قابل ویرایش نیست.
           </InlineMessage>
         ) : null}
 
@@ -80,6 +74,7 @@ export function EditPlanDialog({
           <Input
             id="a01-edit-date"
             value={deliveryDate}
+            disabled={locked}
             onChange={(event) => setDeliveryDate(event.target.value)}
           />
         </Field>
@@ -92,6 +87,7 @@ export function EditPlanDialog({
                 <button
                   key={option}
                   type="button"
+                  disabled={locked}
                   className={['plan-window-chip', selected ? 'selected' : '']
                     .filter(Boolean)
                     .join(' ')}
@@ -109,6 +105,7 @@ export function EditPlanDialog({
           <Input
             id="a01-edit-name"
             value={name}
+            disabled={locked}
             onChange={(event) => setName(event.target.value)}
           />
         </Field>

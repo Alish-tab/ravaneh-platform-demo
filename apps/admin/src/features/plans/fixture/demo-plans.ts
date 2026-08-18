@@ -1,55 +1,88 @@
 import type { A01PlanViewModel } from '@/features/plans/a01-types';
+import { normalizePlanViewModel } from '@/features/plans/normalize-plan';
 
 /**
- * DEV / Test sample data for A01 only.
+ * DEV / Test sample data for Programs + A01.
  * Not product domain truth. Not OpenAPI samples.
+ *
+ * Fixture clock for date grouping is `FIXTURE_REFERENCE_DATE` (injectable).
+ * That is not a product-hardcoded "today".
  */
+export const FIXTURE_REFERENCE_DATE = '1403-06-01';
+
 export const A01_DEMO_PLANS: A01PlanViewModel[] = [
-  {
+  normalizePlanViewModel({
     id: 'P-2408',
     name: 'برنامه تحویل — ۲ شهریور — ۹ تا ۱۲',
     deliveryDate: '۱۴۰۳/۰۶/۰۲',
     window: '۹ تا ۱۲',
+    lastChanged: '۱ ساعت پیش',
+    lifecycle: 'draft',
+    needsAttention: 'خطای ورود داده',
+    attentionActionLabel: 'رفع خطای داده',
+    isPreparing: true,
+    suggestedSection: 'intake',
+    canDeleteDraft: false,
+    canMutateDataset: true,
+    a01Mode: 'editable',
     currentStage: 'intake',
     status: 'intake_failed',
-    lastChanged: '۱ ساعت پیش',
     importedFile: {
       name: 'orders_1403-06-02.xlsx',
       uploadedAt: '۱ ساعت پیش',
       rowCount: 0,
     },
-  },
-  {
+  }),
+  normalizePlanViewModel({
     id: 'P-2407',
     name: 'برنامه تحویل — ۱ شهریور — ۱۲ تا ۱۵',
     deliveryDate: '۱۴۰۳/۰۶/۰۱',
     window: '۱۲ تا ۱۵',
+    lastChanged: '۲ ساعت پیش',
+    lifecycle: 'draft',
+    needsAttention: 'بدون دیتاست',
+    attentionActionLabel: 'بارگذاری داده',
+    isPreparing: true,
+    suggestedSection: 'intake',
+    canDeleteDraft: true,
+    canMutateDataset: true,
+    a01Mode: 'editable',
     currentStage: 'intake',
     status: 'draft',
-    lastChanged: '۲ ساعت پیش',
-  },
-  {
+  }),
+  normalizePlanViewModel({
     id: 'P-2406',
     name: 'برنامه تحویل — ۲۸ مرداد',
     deliveryDate: '۱۴۰۳/۰۵/۲۸',
+    lastChanged: '۱۵ دقیقه پیش',
+    lifecycle: 'draft',
+    needsAttention: 'در حال پردازش داده',
+    isPreparing: true,
+    suggestedSection: 'intake',
+    a01Mode: 'editable',
     currentStage: 'intake',
     status: 'process',
-    lastChanged: '۱۵ دقیقه پیش',
     importedFile: {
       name: 'orders_1403-05-28.xlsx',
       uploadedAt: '۱۵ دقیقه پیش',
       rowCount: 200,
     },
-  },
-  {
+  }),
+  normalizePlanViewModel({
     id: 'P-2405',
     name: 'برنامه تحویل — ۲۱ مرداد — ۹ تا ۱۲',
     deliveryDate: '۱۴۰۳/۰۵/۲۱',
     window: '۹ تا ۱۲',
-    currentStage: 'review',
-    status: 'review',
     itemCount: 187,
     lastChanged: 'دیروز',
+    lifecycle: 'draft',
+    needsAttention: '۲۸ سفارش نیازمند بررسی',
+    attentionActionLabel: 'بررسی داده',
+    isPreparing: true,
+    suggestedSection: 'review',
+    a01Mode: 'editable',
+    currentStage: 'review',
+    status: 'review',
     importedFile: {
       name: 'orders_1403-05-21.xlsx',
       uploadedAt: 'دیروز',
@@ -63,52 +96,72 @@ export const A01_DEMO_PLANS: A01PlanViewModel[] = [
         otherReviewCount: 2,
       },
     },
-  },
-  {
+  }),
+  normalizePlanViewModel({
     id: 'P-2404',
     name: 'برنامه تحویل — ۱۴ مرداد — ۱۵ تا ۱۸',
     deliveryDate: '۱۴۰۳/۰۵/۱۴',
     window: '۱۵ تا ۱۸',
-    currentStage: 'planning',
-    status: 'planning_active',
     itemCount: 165,
     lastChanged: '۳ روز پیش',
+    lifecycle: 'readyToPublish',
+    needsAttention: '۲ محدوده بدون راننده',
+    attentionActionLabel: 'تکمیل برنامه‌ریزی',
+    isPreparing: true,
+    suggestedSection: 'planning',
+    hasWorkingVersion: true,
+    a01Mode: 'working',
+    currentStage: 'planning',
+    status: 'planning_active',
     importedFile: {
       name: 'orders_1403-05-14.xlsx',
       uploadedAt: '۴ روز پیش',
       rowCount: 170,
       parseOutcome: 'needs_review',
     },
-  },
-  {
+  }),
+  normalizePlanViewModel({
     id: 'P-2403',
     name: 'برنامه تحویل — ۷ مرداد — ۱۲ تا ۱۵',
     deliveryDate: '۱۴۰۳/۰۵/۰۷',
     window: '۱۲ تا ۱۵',
-    currentStage: 'execution',
-    status: 'active',
     itemCount: 142,
     lastChanged: 'امروز',
+    lifecycle: 'inProgress',
+    needsAttention: null,
+    isPreparing: false,
+    suggestedSection: 'execution',
+    canMutateDataset: false,
+    a01Mode: 'execution-locked',
+    currentStage: 'execution',
+    status: 'active',
     importedFile: {
       name: 'orders_1403-05-07.xlsx',
       uploadedAt: '۶ روز پیش',
       rowCount: 148,
       parseOutcome: 'clean',
     },
-  },
-  {
+  }),
+  normalizePlanViewModel({
     id: 'P-2402',
     name: 'برنامه تحویل — ۳۱ تیر',
     deliveryDate: '۱۴۰۳/۰۴/۳۱',
-    currentStage: 'execution',
-    status: 'done',
     itemCount: 198,
     lastChanged: '۱ هفته پیش',
+    lifecycle: 'completed',
+    needsAttention: null,
+    isPreparing: false,
+    suggestedSection: 'execution',
+    canMutateDataset: false,
+    canEditMetadata: false,
+    a01Mode: 'completed-readonly',
+    currentStage: 'execution',
+    status: 'done',
     importedFile: {
       name: 'orders_1403-04-31.xlsx',
       uploadedAt: '۱ هفته پیش',
       rowCount: 200,
       parseOutcome: 'clean',
     },
-  },
+  }),
 ];

@@ -1,20 +1,73 @@
 ﻿/* Plans list and plan metadata presentation. */
 .plans-toolbar {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: stretch;
+  gap: 0;
   flex-shrink: 0;
-  padding: 12px 20px;
+  min-height: 46px;
+  padding: 0 20px;
   background: var(--bg-elevated);
   border-bottom: 1px solid var(--border-default);
 }
 
+.plans-view-tabs {
+  display: flex;
+  align-items: stretch;
+  margin-inline-end: 16px;
+}
+
+.plans-view-tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--text-muted);
+  font-family: var(--font-primary);
+  font-size: 12.5px;
+  font-weight: 400;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
+}
+
+.plans-view-tab.active {
+  color: var(--text-primary);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}
+
+.plans-count-pill {
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  padding: 1px 6px;
+  border-radius: var(--r-full);
+  background: var(--bg-surface);
+  color: var(--text-disabled);
+  border: 1px solid var(--border-subtle);
+}
+
+.plans-count-pill.active {
+  background: var(--accent-dim);
+  color: var(--accent-text);
+  border-color: rgba(61, 123, 212, 0.3);
+}
+
 .plans-toolbar-divider {
   width: 1px;
-  height: 28px;
+  align-self: stretch;
+  margin: 10px 0;
   background: var(--border-subtle);
   flex-shrink: 0;
-  margin-inline: 2px;
+}
+
+.plans-toolbar .input-wrap {
+  margin-inline-start: 14px;
 }
 
 .plans-centered {
@@ -42,14 +95,118 @@
   color: var(--error-text);
 }
 
-.plan-stage-pill {
+.plans-state-icon-success {
+  width: 40px;
+  height: 40px;
+  background: rgba(43, 157, 111, 0.1);
+  border-color: rgba(43, 157, 111, 0.25);
+  color: var(--success-text);
+}
+
+.plans-working-chip {
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: rgba(201, 144, 53, 0.12);
+  border: 1px solid rgba(201, 144, 53, 0.3);
+  color: var(--warning-text);
+}
+
+.plans-attention-cta {
   font-size: 11px;
-  padding: 2px 7px;
+  padding: 2px 8px;
   border-radius: var(--r-xs);
   background: var(--bg-surface);
-  color: var(--text-secondary);
   border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  font-family: var(--font-primary);
   white-space: nowrap;
+  cursor: pointer;
+}
+
+.plans-date-divider {
+  padding: 22px 16px 6px !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.plans-date-divider-inner {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--font-primary);
+  text-align: start;
+  cursor: default;
+}
+
+button.plans-date-divider-inner {
+  cursor: pointer;
+}
+
+.plans-date-chip {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--r-xs);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.plans-date-chip.today {
+  background: rgba(61, 123, 212, 0.18);
+  border: 1px solid rgba(61, 123, 212, 0.4);
+  color: var(--accent-text);
+}
+
+.plans-date-chip.tomorrow {
+  background: rgba(201, 144, 53, 0.12);
+  border: 1px solid rgba(201, 144, 53, 0.3);
+  color: var(--warning-text);
+}
+
+.plans-date-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.plans-date-chip + .plans-date-label {
+  color: var(--text-primary);
+}
+
+.plans-date-label.muted {
+  color: var(--text-muted);
+}
+
+.plans-date-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.plans-date-rule {
+  flex: 1;
+  height: 1px;
+  background: var(--border-default);
+  opacity: 0.45;
+  margin-inline-start: 4px;
+}
+
+.plans-pagination {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+  flex-shrink: 0;
 }
 
 .badge-count {
@@ -62,37 +219,6 @@
   border: 1px solid var(--border-default);
   border-radius: var(--r-xs);
   padding: 1px 6px;
-}
-
-.seg-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 1px;
-  padding: 2px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-default);
-  border-radius: var(--r-sm);
-}
-
-.seg-opt {
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-family: var(--font-primary);
-  font-size: 12px;
-  padding: 4px 11px;
-  border-radius: calc(var(--r-sm) - 1px);
-  cursor: pointer;
-}
-
-.seg-opt.active {
-  background: var(--accent-dim);
-  color: var(--accent-text);
-}
-
-.seg-opt:hover:not(.active) {
-  background: var(--bg-hover);
-  color: var(--text-primary);
 }
 
 .skeleton {
@@ -132,4 +258,9 @@
   border-color: var(--accent);
   background: var(--accent-dim);
   color: var(--accent-text);
+}
+
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
