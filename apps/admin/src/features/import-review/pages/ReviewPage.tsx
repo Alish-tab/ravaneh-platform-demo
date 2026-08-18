@@ -6,6 +6,11 @@ import { ReviewInspector } from '@/features/import-review/components/ReviewInspe
 import { ReviewSummaryToolbar } from '@/features/import-review/components/ReviewSummaryToolbar';
 import { ReviewTable } from '@/features/import-review/components/ReviewTable';
 import { useReviewFixture } from '@/features/import-review/fixture/useReviewFixture';
+import {
+  canMutateReview,
+  isHistoricalReviewView,
+  isPublishedReviewView,
+} from '@/features/import-review/review-model';
 import { PlanContextHeader } from '@/features/plans/components/PlanContextHeader';
 import { Icon, ICONS } from '@/features/plans/components/icons';
 import { usePlansDataPort } from '@/features/plans/fixture/usePlansFixture';
@@ -19,28 +24,26 @@ export function ReviewPage() {
   const navigate = useNavigate();
   const plansPort = usePlansDataPort();
   const { plan, status, reload } = usePlan(planId);
-  const review = useReviewFixture({ empty: plan?.itemCount === 0 });
+  const review = useReviewFixture(plan);
 
   const [continuing, setContinuing] = useState(false);
   const [continueError, setContinueError] = useState(false);
+  const [creatingWorking, setCreatingWorking] = useState(false);
 
-  const continueToPlanning = async () => {
+  const continueToPlanning = () => {
     if (!plan || !review.canContinue) return;
-
     setContinuing(true);
     setContinueError(false);
+    navigate(`/plans/${plan.id}/planning`);
+  };
 
+  const createWorkingVersion = async () => {
+    if (!plan) return;
+    setCreatingWorking(true);
     try {
-      await plansPort.updatePlan(plan.id, {
-        currentStage: 'planning',
-        status: 'planning_active',
-        lastChanged: 'همین الان',
-      });
-
-      navigate(`/plans/${plan.id}/planning`);
-    } catch {
-      setContinueError(true);
-      setContinuing(false);
+      await plansPort.createWorkingVersion(plan.id);
+    } finally {
+      setCreatingWorking(false);
     }
   };
 
@@ -56,7 +59,6 @@ export function ReviewPage() {
     return (
       <div className="plan-workspace-page flex flex-col items-start gap-3 p-6">
         <InlineMessage tone="error">بارگذاری برنامه ناموفق بود.</InlineMessage>
-
         <Button variant="secondary" size="sm" onClick={() => void reload()}>
           تلاش مجدد
         </Button>
@@ -72,6 +74,29 @@ export function ReviewPage() {
     );
   }
 
+  if (review.loadStatus === 'loading') {
+    return (
+      <div className="plan-workspace-page p-6">
+        <InlineMessage tone="info">در حال بارگذاری بررسی…</InlineMessage>
+      </div>
+    );
+  }
+
+  if (review.loadStatus === 'error') {
+    return (
+      <div className="plan-workspace-page flex flex-col items-start gap-3 p-6">
+        <InlineMessage tone="error">بارگذاری برنامه ناموفق بود.</InlineMessage>
+        <Button variant="secondary" size="sm" onClick={() => void review.reload()}>
+          تلاش مجدد
+        </Button>
+      </div>
+    );
+  }
+
+  const publishedView = isPublishedReviewView(plan);
+  const historicalView = isHistoricalReviewView(plan);
+  const readOnly = !canMutateReview(plan);
+  const stale = plansPort.isStale(plan.id);
   const pageFeedback = continueError
     ? {
         tone: 'error' as const,
@@ -85,20 +110,85 @@ export function ReviewPage() {
         }
       : null;
 
+  const allResolved = review.tasks.length > 0 && review.counts.action === 0;
+
   return (
     <div className="plan-workspace-page">
       <PlanContextHeader plan={plan} />
+
+      {publishedView ? (
+        <div className="review-version-banner review-version-banner--published" role="status">
+          <span>نسخه منتشرشده · فقط مشاهده</span>
+          {plan.lifecycle === 'published' || plan.lifecycle === 'readyToPublish' ? (
+            <Button variant="subtle" size="sm" loading={creatingWorking} onClick={() => void createWorkingVersion()}>
+              ایجاد نسخه کاری
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {plan.a01Mode === 'working' ? (
+        <div className="review-version-banner review-version-banner--working" role="status">
+          نسخه در حال ویرایش · تغییرات تا انتشار برای راننده‌ها دیده نمی‌شود.
+        </div>
+      ) : null}
+
+      {historicalView ? (
+        <div className="review-version-banner" role="status">
+          این برنامه تاریخی/در حال اجرا است و بررسی فقط خواندنی است.
+        </div>
+      ) : null}
+
+      {stale ? (
+        <div className="review-version-banner review-version-banner--stale" role="status">
+          <span>اطلاعات این صفحه قدیمی است. اطلاعات جدید را دریافت کنید.</span>
+          <Button
+            variant="subtle"
+            size="sm"
+            onClick={() => {
+              plansPort.markStale(plan.id, false);
+              void reload();
+              void review.reload();
+            }}
+          >
+            دریافت اطلاعات جدید
+          </Button>
+        </div>
+      ) : null}
+
+      {review.conflict ? (
+        <div className="review-version-banner review-version-banner--conflict" role="alert">
+          این مورد در جای دیگری تغییر کرده است. اطلاعات جدید را دریافت کنید.
+          <Button variant="subtle" size="sm" onClick={() => void review.reload()}>
+            دریافت اطلاعات جدید
+          </Button>
+        </div>
+      ) : null}
 
       <ReviewSummaryToolbar
         activeTab={review.activeTab}
         counts={review.counts}
         issueCounts={review.issueCounts}
-        activeIssue={review.activeIssue}
+        activeIssues={review.activeIssues}
         search={review.search}
+        recentOnly={review.recentOnly}
+        recentCount={review.recentCount}
         onTabChange={review.setActiveTab}
-        onIssueChange={review.setActiveIssue}
+        onToggleIssue={review.toggleIssue}
         onSearchChange={review.setSearch}
+        onClearFilters={review.clearFilters}
+        onShowRecent={() => {
+          review.setActiveTab('all');
+          review.setRecentOnly(true);
+        }}
+        onClearRecent={() => review.setRecentOnly(false)}
       />
+
+      {allResolved ? (
+        <div className="review-resolved-notice" role="status">
+          مورد نیازمند بررسی باقی نمانده است. بخش بررسی همچنان در دسترس است.
+        </div>
+      ) : null}
 
       {pageFeedback ? (
         <div className="review-feedback">
@@ -120,23 +210,21 @@ export function ReviewPage() {
           emptyMessage={
             review.tasks.length === 0
               ? 'این برنامه موردی برای بررسی ندارد.'
-              : review.search || review.activeIssue
+              : review.hasActiveFilters
                 ? 'موردی با جستجو یا فیلتر فعلی پیدا نشد.'
                 : 'موردی در این بخش وجود ندارد.'
           }
           isDatasetEmpty={review.tasks.length === 0}
-          onClearFilters={
-            review.search || review.activeIssue
-              ? () => {
-                  review.setSearch('');
-                  review.setActiveIssue(null);
-                }
-              : undefined
+          pendingIds={review.pendingAction?.ids ?? []}
+          failedIds={
+            review.feedback?.tone === 'error' && review.pendingAction === null
+              ? []
+              : []
           }
+          recentlyResolvedIds={review.recentlyResolvedIds}
+          onClearFilters={review.hasActiveFilters ? review.clearFilters : undefined}
           onInspect={(task) =>
-            review.setInspectedId(
-              review.inspectedId === task.id ? null : task.id,
-            )
+            review.setInspectedId(review.inspectedId === task.id ? null : task.id)
           }
           onToggleChecked={review.toggleChecked}
           onToggleAllVisible={review.toggleAllVisible}
@@ -146,13 +234,28 @@ export function ReviewPage() {
           <BulkReviewInspector
             tasks={review.checkedTasks}
             onExclude={review.exclude}
+            onRestore={review.restoreMany}
             onClear={review.clearChecked}
-            pending={review.pendingAction?.kind === 'bulk-exclude'}
+            pending={
+              review.pendingAction?.kind === 'bulk-exclude' ||
+              review.pendingAction?.kind === 'bulk-restore'
+            }
+            pendingKind={
+              review.pendingAction?.kind === 'bulk-exclude' ||
+              review.pendingAction?.kind === 'bulk-restore'
+                ? review.pendingAction.kind
+                : undefined
+            }
+            readOnly={readOnly}
           />
         ) : (
           <ReviewInspector
+            key={review.inspectedTask?.reviewItemId ?? 'empty'}
             task={review.inspectedTask}
+            allTasks={review.tasks}
             pendingKind={review.pendingAction?.kind}
+            saveFailed={review.feedback?.tone === 'error'}
+            readOnly={readOnly}
             onResolveLocation={review.resolveLocation}
             onEditInformation={review.editInformation}
             onResolveDuplicate={review.resolveDuplicate}
@@ -165,16 +268,9 @@ export function ReviewPage() {
       <footer className="review-progress">
         <div className="flex flex-1 items-center gap-[7px] text-[12.5px] text-[var(--text-secondary)]">
           <span
-            className={
-              review.canContinue
-                ? 'text-[var(--success-text)]'
-                : 'text-[var(--warning-text)]'
-            }
+            className={review.canContinue ? 'text-[var(--success-text)]' : 'text-[var(--warning-text)]'}
           >
-            <Icon
-              d={review.canContinue ? ICONS.check : ICONS.alert}
-              size={13}
-            />
+            <Icon d={review.canContinue ? ICONS.check : ICONS.alert} size={13} />
           </span>
 
           {review.canContinue ? (
@@ -201,7 +297,7 @@ export function ReviewPage() {
           variant={review.canContinue ? 'primary' : 'secondary'}
           disabled={!review.canContinue || continuing}
           loading={continuing}
-          onClick={() => void continueToPlanning()}
+          onClick={continueToPlanning}
         >
           تأیید و ادامه به برنامه‌ریزی
         </Button>

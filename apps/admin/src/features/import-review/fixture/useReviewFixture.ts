@@ -1,47 +1,117 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { createReviewFixtureTasks } from '@/features/import-review/fixture/review-fixture';
 import { isActiveReviewIssue } from '@/features/import-review/presentation';
+import {
+  canMutateReview,
+  matchesReviewSearch,
+  toReviewTask,
+} from '@/features/import-review/review-model';
 import type {
-  ReviewCounts,
   ReviewActionKind,
+  ReviewCounts,
   ReviewFeedback,
-  ReviewIssue,
   ReviewIssueFilter,
-  ReviewState,
+  ReviewLatLng,
   ReviewTab,
   ReviewTask,
   ReviewTaskUpdate,
 } from '@/features/import-review/review-types';
+import type { A01PlanViewModel } from '@/features/plans/a01-types';
+import { usePlansDataPort, usePlansFixtureVersion } from '@/features/plans/fixture/usePlansFixture';
 
-const FIXTURE_ACTION_DELAY_MS = 180;
-export const REVIEW_FIXTURE_FAILURE_VALUE = 'fixture:error';
+export { REVIEW_FIXTURE_FAILURE_VALUE } from '@/features/import-review/review-model';
 
-function stateFromIssues(issues: ReviewIssue[]): ReviewState {
-  if (issues.includes('invalid_coords')) return 'error';
-  if (issues.some((issue) => issue !== 'multi_order_location')) return 'review';
-  return 'ready';
+function errorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message === 'REVIEW_CONFLICT') {
+    return 'این مورد در جای دیگری تغییر کرده است. اطلاعات جدید را دریافت کنید.';
+  }
+  if (error instanceof Error && error.message === 'REVIEW_READONLY') {
+    return 'این نسخه فقط خواندنی است.';
+  }
+  return fallback;
 }
 
-export function useReviewFixture({ empty = false }: { empty?: boolean } = {}) {
-  const [tasks, setTasks] = useState<ReviewTask[]>(createReviewFixtureTasks);
-  const [inspectedId, setInspectedId] = useState<string | null>('D-1044');
+export function useReviewFixture(plan: A01PlanViewModel | null) {
+  const port = usePlansDataPort();
+  const version = usePlansFixtureVersion();
+  const planId = plan?.id;
+  const initializedInspect = useRef(false);
+  const loadedPlanId = useRef<string | null>(null);
+
+  const [tasks, setTasks] = useState<ReviewTask[]>([]);
+  const [loadStatus, setLoadStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [inspectedId, setInspectedId] = useState<string | null>(null);
   const [checkedIds, setCheckedIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<ReviewTab>('action');
-  const [activeIssue, setActiveIssue] = useState<ReviewIssueFilter | null>(null);
+  const [activeIssues, setActiveIssues] = useState<ReviewIssueFilter[]>([]);
   const [search, setSearch] = useState('');
+  const [recentOnly, setRecentOnly] = useState(false);
   const [pendingAction, setPendingAction] = useState<{
     kind: ReviewActionKind;
     ids: string[];
   } | null>(null);
   const [feedback, setFeedback] = useState<ReviewFeedback>(null);
+  const [recentlyResolvedIds, setRecentlyResolvedIds] = useState<string[]>([]);
+  const [conflict, setConflict] = useState(false);
+
+  const readOnly = !canMutateReview(plan);
+
+  const reload = useCallback(async () => {
+    if (!planId) {
+      setTasks([]);
+      setLoadStatus('loading');
+      return;
+    }
+    try {
+      const items = await port.listReviewItems(planId);
+      const next = items.map(toReviewTask);
+      loadedPlanId.current = planId;
+      setTasks(next);
+      setLoadStatus('ready');
+      setInspectedId((current) => {
+        if (!initializedInspect.current) {
+          initializedInspect.current = true;
+          return next[0]?.id ?? null;
+        }
+        if (current && next.some((task) => task.id === current)) return current;
+        return current;
+      });
+    } catch {
+      setLoadStatus('error');
+    }
+  }, [planId, port]);
 
   useEffect(() => {
-    if (!empty) return;
-    setTasks([]);
-    setInspectedId(null);
-    setCheckedIds([]);
-  }, [empty]);
+    let cancelled = false;
+    const load = async () => {
+      if (!planId) return;
+      if (loadedPlanId.current !== planId) {
+        initializedInspect.current = false;
+      }
+      try {
+        const items = await port.listReviewItems(planId);
+        if (cancelled) return;
+        const next = items.map(toReviewTask);
+        loadedPlanId.current = planId;
+        setTasks(next);
+        setLoadStatus('ready');
+        setInspectedId((current) => {
+          if (!initializedInspect.current) {
+            initializedInspect.current = true;
+            return next[0]?.id ?? null;
+          }
+          if (current && next.some((task) => task.id === current)) return current;
+          return current;
+        });
+      } catch {
+        if (!cancelled) setLoadStatus('error');
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [planId, port, version]);
 
   const counts = useMemo<ReviewCounts>(
     () => ({
@@ -55,8 +125,12 @@ export function useReviewFixture({ empty = false }: { empty?: boolean } = {}) {
 
   const issueCounts = useMemo<Record<ReviewIssueFilter, number>>(() => {
     const included = tasks.filter((task) => task.state !== 'excluded');
-    const count = (issue: ReviewIssue) =>
-      included.filter((task) => task.issues.includes(issue)).length;
+    const count = (issue: ReviewIssueFilter) =>
+      included.filter((task) =>
+        issue === 'multiple'
+          ? task.issues.filter(isActiveReviewIssue).length >= 2
+          : task.issues.includes(issue),
+      ).length;
     return {
       loc_not_found: count('loc_not_found'),
       loc_ambiguous: count('loc_ambiguous'),
@@ -65,31 +139,33 @@ export function useReviewFixture({ empty = false }: { empty?: boolean } = {}) {
       phone: count('phone'),
       dup_order_id: count('dup_order_id'),
       multi_order_location: count('multi_order_location'),
-      multiple: included.filter((task) => task.issues.filter(isActiveReviewIssue).length >= 2)
-        .length,
+      multiple: count('multiple'),
     };
   }, [tasks]);
 
+  const recentCount = useMemo(
+    () => tasks.filter((task) => Boolean(task.dataUpdateTag) && task.state !== 'excluded').length,
+    [tasks],
+  );
+
   const visibleTasks = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase('fa');
     return tasks.filter((task) => {
+      if (recentOnly && !task.dataUpdateTag) return false;
       if (activeTab === 'ready' && task.state !== 'ready') return false;
       if (activeTab === 'action' && task.state !== 'review' && task.state !== 'error') return false;
       if (activeTab === 'excluded' && task.state !== 'excluded') return false;
-      if (activeIssue === 'multiple' && task.issues.filter(isActiveReviewIssue).length < 2)
-        return false;
-      if (activeIssue && activeIssue !== 'multiple' && !task.issues.includes(activeIssue))
-        return false;
-      if (
-        query &&
-        ![task.id, task.name, task.phone, task.address].some((value) =>
-          value.toLocaleLowerCase('fa').includes(query),
-        )
-      )
-        return false;
+      if (activeIssues.length > 0) {
+        const matchesIssue = activeIssues.some((issue) =>
+          issue === 'multiple'
+            ? task.issues.filter(isActiveReviewIssue).length >= 2
+            : task.issues.includes(issue),
+        );
+        if (!matchesIssue) return false;
+      }
+      if (search.trim() && !matchesReviewSearch(task, search)) return false;
       return true;
     });
-  }, [activeIssue, activeTab, search, tasks]);
+  }, [activeIssues, activeTab, recentOnly, search, tasks]);
 
   const inspectedTask = visibleTasks.find((task) => task.id === inspectedId) ?? null;
   const checkedTasks = checkedIds.flatMap((id) => {
@@ -101,10 +177,7 @@ export function useReviewFixture({ empty = false }: { empty?: boolean } = {}) {
     visibleIds.length > 0 && visibleIds.every((id) => checkedIds.includes(id));
   const someVisibleChecked = visibleIds.some((id) => checkedIds.includes(id));
   const canContinue = counts.action === 0;
-
-  const updateTask = (id: string, update: (task: ReviewTask) => ReviewTask) => {
-    setTasks((current) => current.map((task) => (task.id === id ? update(task) : task)));
-  };
+  const hasActiveFilters = activeIssues.length > 0 || Boolean(search.trim()) || recentOnly;
 
   const toggleChecked = (id: string) => {
     setCheckedIds((current) =>
@@ -119,95 +192,171 @@ export function useReviewFixture({ empty = false }: { empty?: boolean } = {}) {
     });
   };
 
-  const runAction = async (
+  const toggleIssue = (issue: ReviewIssueFilter) => {
+    setActiveIssues((current) =>
+      current.includes(issue) ? current.filter((item) => item !== issue) : [...current, issue],
+    );
+  };
+
+  const clearFilters = () => {
+    setActiveIssues([]);
+    setSearch('');
+    setRecentOnly(false);
+  };
+
+  const markRecentlyResolved = (ids: string[]) => {
+    setRecentlyResolvedIds((current) => Array.from(new Set([...current, ...ids])));
+  };
+
+  const runMutation = async (
     kind: ReviewActionKind,
     ids: string[],
-    mutate: () => void,
+    mutate: () => Promise<void>,
     successMessage: string,
-    shouldFail = false,
+    failureFallback: string,
   ) => {
+    if (!planId || readOnly) return false;
     setFeedback(null);
+    setConflict(false);
     setPendingAction({ kind, ids });
-    await new Promise((resolve) => window.setTimeout(resolve, FIXTURE_ACTION_DELAY_MS));
-    if (shouldFail) {
-      setFeedback({ tone: 'error', message: 'ذخیره تغییرات آزمایشی ناموفق بود. دوباره تلاش کنید.' });
+    try {
+      await mutate();
+      markRecentlyResolved(ids);
+      setFeedback({ tone: 'success', message: successMessage });
+      setPendingAction(null);
+      return true;
+    } catch (error) {
+      const isConflict = error instanceof Error && error.message === 'REVIEW_CONFLICT';
+      if (isConflict) setConflict(true);
+      setFeedback({
+        tone: isConflict ? 'warning' : 'error',
+        message: errorMessage(error, failureFallback),
+      });
       setPendingAction(null);
       return false;
     }
-    mutate();
-    setFeedback({ tone: 'success', message: successMessage });
-    setPendingAction(null);
-    return true;
   };
 
-  const applyExclude = (ids: string[]) => {
-    const target = new Set(ids);
-    setTasks((current) =>
-      current.map((task) => (target.has(task.id) ? { ...task, state: 'excluded' } : task)),
-    );
-    setCheckedIds((current) => current.filter((id) => !target.has(id)));
+  const exclude = async (ids: string[]) => {
+    if (!planId || readOnly) return false;
+    setFeedback(null);
+    setConflict(false);
+    setPendingAction({ kind: ids.length > 1 ? 'bulk-exclude' : 'exclude', ids });
+    try {
+      const result = await port.excludeReviewItems(planId, ids);
+      setCheckedIds((current) => current.filter((id) => !result.succeededIds.includes(id)));
+      markRecentlyResolved(result.succeededIds);
+      if (result.failedIds.length && result.succeededIds.length) {
+        setFeedback({
+          tone: 'warning',
+          message: `${result.succeededIds.length} مورد مستثنا شد؛ ${result.failedIds.length} مورد انجام نشد.`,
+        });
+      } else if (result.failedIds.length) {
+        setFeedback({ tone: 'error', message: 'مستثنا کردن سفارش انجام نشد.' });
+        setPendingAction(null);
+        return false;
+      } else {
+        setFeedback({
+          tone: 'success',
+          message:
+            ids.length > 1 ? `${result.succeededIds.length} سفارش مستثنا شدند.` : 'سفارش مستثنا شد.',
+        });
+      }
+      setPendingAction(null);
+      return result.failedIds.length === 0;
+    } catch (error) {
+      const isConflict = error instanceof Error && error.message === 'REVIEW_CONFLICT';
+      if (isConflict) setConflict(true);
+      setFeedback({
+        tone: isConflict ? 'warning' : 'error',
+        message: errorMessage(error, 'مستثنا کردن سفارش انجام نشد.'),
+      });
+      setPendingAction(null);
+      return false;
+    }
   };
-
-  const exclude = (ids: string[]) =>
-    runAction(
-      ids.length > 1 ? 'bulk-exclude' : 'exclude',
-      ids,
-      () => applyExclude(ids),
-      ids.length > 1 ? `${ids.length} سفارش مستثنا شدند.` : 'سفارش مستثنا شد.',
-    );
 
   const restore = (id: string) =>
-    runAction(
+    runMutation(
       'restore',
       [id],
-      () => updateTask(id, (task) => ({ ...task, state: stateFromIssues(task.issues) })),
+      async () => {
+        await port.restoreReviewItems(planId!, [id]);
+      },
       'سفارش به فهرست بررسی بازگردانده شد.',
+      'بازگرداندن سفارش انجام نشد.',
     );
 
-  const resolveLocation = (id: string, coordinates: string) =>
-    runAction(
+  const restoreMany = async (ids: string[]) => {
+    if (!planId || readOnly) return false;
+    setFeedback(null);
+    setConflict(false);
+    setPendingAction({ kind: 'bulk-restore', ids });
+    try {
+      const result = await port.restoreReviewItems(planId, ids);
+      setCheckedIds((current) => current.filter((id) => !result.succeededIds.includes(id)));
+      markRecentlyResolved(result.succeededIds);
+      if (result.failedIds.length && result.succeededIds.length) {
+        setFeedback({
+          tone: 'warning',
+          message: `${result.succeededIds.length} مورد بازگردانده شد؛ ${result.failedIds.length} مورد انجام نشد.`,
+        });
+      } else if (result.failedIds.length) {
+        setFeedback({ tone: 'error', message: 'بازگرداندن گروهی انجام نشد.' });
+        setPendingAction(null);
+        return false;
+      } else {
+        setFeedback({
+          tone: 'success',
+          message: `${result.succeededIds.length} سفارش بازگردانده شد.`,
+        });
+      }
+      setPendingAction(null);
+      return result.failedIds.length === 0;
+    } catch (error) {
+      const isConflict = error instanceof Error && error.message === 'REVIEW_CONFLICT';
+      if (isConflict) setConflict(true);
+      setFeedback({
+        tone: isConflict ? 'warning' : 'error',
+        message: errorMessage(error, 'بازگرداندن گروهی انجام نشد.'),
+      });
+      setPendingAction(null);
+      return false;
+    }
+  };
+
+  const resolveLocation = (id: string, coords: ReviewLatLng) =>
+    runMutation(
       'location',
       [id],
-      () =>
-        updateTask(id, (task) => {
-          const issues = task.issues.filter(
-            (issue) =>
-              issue !== 'loc_not_found' &&
-              issue !== 'loc_ambiguous' &&
-              issue !== 'loc_mismatch' &&
-              issue !== 'invalid_coords',
-          );
-          return { ...task, coordinates, issues, state: stateFromIssues(issues) };
-        }),
+      async () => {
+        await port.resolveReviewLocation(planId!, id, coords);
+      },
       'موقعیت سفارش ذخیره شد.',
-      coordinates.trim() === REVIEW_FIXTURE_FAILURE_VALUE,
+      'ذخیره تغییرات آزمایشی ناموفق بود. دوباره تلاش کنید.',
     );
 
   const editInformation = (id: string, values: ReviewTaskUpdate) =>
-    runAction(
+    runMutation(
       'information',
       [id],
-      () =>
-        updateTask(id, (task) => {
-          const phoneValid = /^09\d{9}$/.test(values.phone.replace(/\D/g, ''));
-          const issues = phoneValid ? task.issues.filter((issue) => issue !== 'phone') : task.issues;
-          return { ...task, ...values, issues, state: stateFromIssues(issues) };
-        }),
+      async () => {
+        await port.updateReviewInformation(planId!, id, values);
+      },
       'اطلاعات سفارش ذخیره شد.',
-      values.name.trim() === REVIEW_FIXTURE_FAILURE_VALUE,
+      'ذخیره تغییرات آزمایشی ناموفق بود. دوباره تلاش کنید.',
     );
 
   const resolveDuplicate = (id: string, decision: 'both_valid' | 'exclude_current') =>
-    runAction('duplicate', [id], () => {
-    if (decision === 'exclude_current') {
-      applyExclude([id]);
-      return;
-    }
-    updateTask(id, (task) => {
-      const issues = task.issues.filter((issue) => issue !== 'dup_order_id');
-      return { ...task, issues, state: stateFromIssues(issues) };
-    });
-    }, decision === 'exclude_current' ? 'سفارش تکراری مستثنا شد.' : 'تصمیم سفارش تکراری ثبت شد.');
+    runMutation(
+      'duplicate',
+      [id],
+      async () => {
+        await port.resolveReviewDuplicate(planId!, id, decision);
+      },
+      decision === 'exclude_current' ? 'سفارش تکراری مستثنا شد.' : 'تصمیم سفارش تکراری ثبت شد.',
+      'ثبت تصمیم تکراری انجام نشد.',
+    );
 
   return {
     tasks,
@@ -224,20 +373,32 @@ export function useReviewFixture({ empty = false }: { empty?: boolean } = {}) {
     clearChecked: () => setCheckedIds([]),
     activeTab,
     setActiveTab,
-    activeIssue,
-    setActiveIssue,
+    activeIssues,
+    toggleIssue,
+    setActiveIssues,
     search,
     setSearch,
+    recentOnly,
+    setRecentOnly,
+    recentCount,
     counts,
     issueCounts,
     canContinue,
+    hasActiveFilters,
+    clearFilters,
     pendingAction,
     feedback,
     clearFeedback: () => setFeedback(null),
     exclude,
     restore,
+    restoreMany,
     resolveLocation,
     editInformation,
     resolveDuplicate,
+    loadStatus,
+    reload,
+    readOnly,
+    recentlyResolvedIds,
+    conflict,
   };
 }

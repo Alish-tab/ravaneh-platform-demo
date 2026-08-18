@@ -6,7 +6,7 @@ export const REVIEW_ISSUE_PRESENTATION: Record<ReviewIssue, { label: string; bad
   {
     loc_not_found: { label: 'موقعیت پیدا نشد', badgeClass: 'badge-error' },
     loc_ambiguous: { label: 'مکان‌یابی مبهم', badgeClass: 'badge-error' },
-    loc_mismatch: { label: 'ناسازگاری آدرس–موقعیت', badgeClass: 'badge-error' },
+    loc_mismatch: { label: 'ناسازگاری آدرس و موقعیت', badgeClass: 'badge-error' },
     invalid_coords: { label: 'مختصات نامعتبر', badgeClass: 'badge-error' },
     phone: { label: 'شماره تماس نامعتبر', badgeClass: 'badge-info' },
     dup_order_id: { label: 'شماره سفارش تکراری', badgeClass: 'badge-warning' },
