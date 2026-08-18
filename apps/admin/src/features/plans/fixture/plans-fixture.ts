@@ -9,6 +9,22 @@
  * This module must NOT be treated as a real API or shared domain store.
  */
 
+import {
+  createReviewStoreForPlan,
+  seedReviewStores,
+  type ReviewPlanStore,
+} from '@/features/import-review/fixture/review-fixture';
+import {
+  REVIEW_FIXTURE_FAILURE_VALUE,
+  stateFromIssues,
+  stripLocationIssues,
+} from '@/features/import-review/review-model';
+import type {
+  ReviewBulkResult,
+  ReviewItem,
+  ReviewLatLng,
+  ReviewTaskUpdate,
+} from '@/features/import-review/review-types';
 import type {
   A01CreatePlanInput,
   A01ImportedFile,
@@ -55,6 +71,28 @@ export type PlansDataPort = {
     batch?: ImportBatchViewModel,
   ) => Promise<A01PlanViewModel>;
   createWorkingVersion: (id: string) => Promise<A01PlanViewModel>;
+  listReviewItems: (planId: string) => Promise<ReviewItem[]>;
+  getPublishedReviewItems: (planId: string) => ReviewItem[] | null;
+  updateReviewInformation: (
+    planId: string,
+    reviewItemId: string,
+    values: ReviewTaskUpdate,
+  ) => Promise<ReviewItem>;
+  resolveReviewLocation: (
+    planId: string,
+    reviewItemId: string,
+    coords: ReviewLatLng,
+  ) => Promise<ReviewItem>;
+  excludeReviewItems: (planId: string, reviewItemIds: string[]) => Promise<ReviewBulkResult>;
+  restoreReviewItems: (planId: string, reviewItemIds: string[]) => Promise<ReviewBulkResult>;
+  resolveReviewDuplicate: (
+    planId: string,
+    reviewItemId: string,
+    decision: 'both_valid' | 'exclude_current',
+  ) => Promise<ReviewItem>;
+  setNextReviewSaveFailure: (fail: boolean) => void;
+  setNextReviewConflict: (fail: boolean) => void;
+  setNextBulkPartialFailure: (fail: boolean) => void;
   isStale: (id: string) => boolean;
   markStale: (id: string, stale?: boolean) => void;
   setNextCreateFailure: (fail: boolean) => void;
@@ -99,9 +137,13 @@ export function createPlansFixturePort(options?: {
   referenceDate?: string;
 }): PlansDataPort {
   let plans = clonePlans(options?.seed ?? A01_DEMO_PLANS);
+  let reviewStores = seedReviewStores(plans);
   let listMode: PlansListMode = 'ok';
   let nextCreateFailure = false;
   let nextApplyFailure = false;
+  let nextReviewSaveFailure = false;
+  let nextReviewConflict = false;
+  let nextBulkPartialFailure = false;
   const staleIds = new Set<string>();
   let idSeq = 2409;
   let batchSeq = 1;
@@ -120,6 +162,73 @@ export function createPlansFixturePort(options?: {
     const index = plans.findIndex((plan) => plan.id === id);
     if (index < 0) throw new Error('PLAN_NOT_FOUND');
     plans = [...plans.slice(0, index), next, ...plans.slice(index + 1)];
+  };
+
+  const ensureReviewStore = (planId: string): ReviewPlanStore => {
+    const existing = reviewStores.get(planId);
+    if (existing) return existing;
+    const plan = plans.find((candidate) => candidate.id === planId);
+    const created = plan
+      ? createReviewStoreForPlan(plan)
+      : { working: [] as ReviewItem[], published: null };
+    reviewStores.set(planId, created);
+    return created;
+  };
+
+  const requirePlan = (planId: string) => {
+    const plan = plans.find((candidate) => candidate.id === planId);
+    if (!plan) throw new Error('PLAN_NOT_FOUND');
+    return plan;
+  };
+
+  const requireMutableReview = (planId: string) => {
+    const plan = requirePlan(planId);
+    if (!(plan.a01Mode === 'editable' || plan.a01Mode === 'working') || !plan.canMutateDataset) {
+      throw new Error('REVIEW_READONLY');
+    }
+    return { plan, store: ensureReviewStore(planId) };
+  };
+
+  const visibleReviewItems = (planId: string): ReviewItem[] => {
+    const plan = requirePlan(planId);
+    const store = ensureReviewStore(planId);
+    if (
+      plan.a01Mode === 'published-readonly' ||
+      plan.a01Mode === 'execution-locked' ||
+      plan.a01Mode === 'completed-readonly'
+    ) {
+      return structuredClone(store.published ?? store.working);
+    }
+    return structuredClone(store.working);
+  };
+
+  const mutateWorkingItem = (
+    planId: string,
+    reviewItemId: string,
+    update: (item: ReviewItem) => ReviewItem,
+  ): ReviewItem => {
+    const { store } = requireMutableReview(planId);
+    const index = store.working.findIndex((item) => item.reviewItemId === reviewItemId);
+    if (index < 0) throw new Error('REVIEW_ITEM_NOT_FOUND');
+    const next = update(store.working[index]!);
+    store.working = [
+      ...store.working.slice(0, index),
+      next,
+      ...store.working.slice(index + 1),
+    ];
+    return structuredClone(next);
+  };
+
+  const guardReviewMutation = async () => {
+    await delay(mutateDelayMs);
+    if (nextReviewConflict) {
+      nextReviewConflict = false;
+      throw new Error('REVIEW_CONFLICT');
+    }
+    if (nextReviewSaveFailure) {
+      nextReviewSaveFailure = false;
+      throw new Error('REVIEW_SAVE_FAILED');
+    }
   };
 
   return {
@@ -190,6 +299,7 @@ export function createPlansFixturePort(options?: {
         importBatches: [],
       });
       plans = [plan, ...plans];
+      reviewStores.set(plan.id, { working: [], published: null });
       emit();
       return structuredClone(plan);
     },
@@ -208,6 +318,7 @@ export function createPlansFixturePort(options?: {
     async deletePlan(id) {
       await delay(mutateDelayMs / 2);
       plans = plans.filter((plan) => plan.id !== id);
+      reviewStores.delete(id);
       emit();
     },
 
@@ -311,6 +422,12 @@ export function createPlansFixturePort(options?: {
         itemCount: current.itemCount,
         importBatches: current.importBatches,
       });
+      const store = ensureReviewStore(id);
+      if (!store.published) {
+        store.published = structuredClone(store.working);
+      } else if (!current.hasWorkingVersion) {
+        store.working = structuredClone(store.published);
+      }
       const next = normalizePlanViewModel({
         ...current,
         publishedSnapshot: current.publishedSnapshot ?? publishedSnapshot,
@@ -324,6 +441,147 @@ export function createPlansFixturePort(options?: {
       replacePlan(id, next);
       emit();
       return structuredClone(next);
+    },
+
+    async listReviewItems(planId) {
+      await delay(listDelayMs);
+      return visibleReviewItems(planId);
+    },
+
+    getPublishedReviewItems(planId) {
+      const store = reviewStores.get(planId);
+      return store?.published ? structuredClone(store.published) : null;
+    },
+
+    async updateReviewInformation(planId, reviewItemId, values) {
+      await guardReviewMutation();
+      if (values.name.trim() === REVIEW_FIXTURE_FAILURE_VALUE) {
+        throw new Error('REVIEW_SAVE_FAILED');
+      }
+      const next = mutateWorkingItem(planId, reviewItemId, (item) => {
+        const phoneValid = /^09\d{9}$/.test(values.phone.replace(/\D/g, ''));
+        const issues = phoneValid ? item.issues.filter((issue) => issue !== 'phone') : item.issues;
+        return {
+          ...item,
+          name: values.name,
+          phone: values.phone,
+          address: values.address,
+          issues,
+          state: item.state === 'excluded' ? 'excluded' : stateFromIssues(issues),
+          overlay: null,
+          downstreamImpact: values.address !== item.address ? 'planning' : item.downstreamImpact,
+        };
+      });
+      emit();
+      return next;
+    },
+
+    async resolveReviewLocation(planId, reviewItemId, coords) {
+      await guardReviewMutation();
+      if (coords.lat === 0 && coords.lng === 0) {
+        throw new Error('REVIEW_INVALID_LOCATION');
+      }
+      const next = mutateWorkingItem(planId, reviewItemId, (item) => {
+        const issues = stripLocationIssues(item.issues);
+        return {
+          ...item,
+          resolvedLat: coords.lat,
+          resolvedLng: coords.lng,
+          locSource: 'manual',
+          issues,
+          state: item.state === 'excluded' ? 'excluded' : stateFromIssues(issues),
+          overlay: null,
+          downstreamImpact: 'planning',
+        };
+      });
+      emit();
+      return next;
+    },
+
+    async excludeReviewItems(planId, reviewItemIds) {
+      await guardReviewMutation();
+      const { store } = requireMutableReview(planId);
+      const failedIds = nextBulkPartialFailure
+        ? reviewItemIds.slice(-1)
+        : ([] as string[]);
+      nextBulkPartialFailure = false;
+      const failed = new Set(failedIds);
+      const succeededIds = reviewItemIds.filter((id) => !failed.has(id));
+      const target = new Set(succeededIds);
+      store.working = store.working.map((item) =>
+        target.has(item.reviewItemId) ? { ...item, state: 'excluded', overlay: null } : item,
+      );
+      emit();
+      return { succeededIds, failedIds };
+    },
+
+    async restoreReviewItems(planId, reviewItemIds) {
+      await guardReviewMutation();
+      const { store } = requireMutableReview(planId);
+      const failedIds = nextBulkPartialFailure
+        ? reviewItemIds.slice(-1)
+        : ([] as string[]);
+      nextBulkPartialFailure = false;
+      const failed = new Set(failedIds);
+      const succeededIds: string[] = [];
+      store.working = store.working.map((item) => {
+        if (!reviewItemIds.includes(item.reviewItemId) || failed.has(item.reviewItemId)) {
+          return item;
+        }
+        succeededIds.push(item.reviewItemId);
+        return {
+          ...item,
+          state: stateFromIssues(item.issues),
+          overlay: null,
+        };
+      });
+      emit();
+      return { succeededIds, failedIds };
+    },
+
+    async resolveReviewDuplicate(planId, reviewItemId, decision) {
+      await guardReviewMutation();
+      if (decision === 'exclude_current') {
+        const { store } = requireMutableReview(planId);
+        store.working = store.working.map((item) =>
+          item.reviewItemId === reviewItemId
+            ? {
+                ...item,
+                state: 'excluded',
+                duplicateDecision: 'exclude_current',
+                overlay: null,
+              }
+            : item,
+        );
+        const next = store.working.find((item) => item.reviewItemId === reviewItemId);
+        if (!next) throw new Error('REVIEW_ITEM_NOT_FOUND');
+        emit();
+        return structuredClone(next);
+      }
+      const next = mutateWorkingItem(planId, reviewItemId, (item) => {
+        const issues = item.issues.filter((issue) => issue !== 'dup_order_id');
+        return {
+          ...item,
+          issues,
+          state: item.state === 'excluded' ? 'excluded' : stateFromIssues(issues),
+          duplicateDecision: 'both_valid',
+          overlay: null,
+        };
+      });
+      emit();
+      return next;
+    },
+
+    setNextReviewSaveFailure(fail) {
+      nextReviewSaveFailure = fail;
+    },
+
+    setNextReviewConflict(fail) {
+      nextReviewConflict = fail;
+    },
+
+    setNextBulkPartialFailure(fail) {
+      nextBulkPartialFailure = fail;
     },
 
     isStale(id) {
@@ -346,9 +604,13 @@ export function createPlansFixturePort(options?: {
 
     reset(seed) {
       plans = clonePlans(seed ?? A01_DEMO_PLANS);
+      reviewStores = seedReviewStores(plans);
       listMode = 'ok';
       nextCreateFailure = false;
       nextApplyFailure = false;
+      nextReviewSaveFailure = false;
+      nextReviewConflict = false;
+      nextBulkPartialFailure = false;
       staleIds.clear();
       idSeq = 2409;
       batchSeq = 1;

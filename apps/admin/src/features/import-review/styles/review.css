@@ -219,8 +219,93 @@
   font-size: 11px;
 }
 
+.review-recent-notice,
+.review-version-banner,
+.review-resolved-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.review-recent-notice {
+  background: rgba(201, 144, 53, 0.08);
+  border-bottom-color: rgba(201, 144, 53, 0.22);
+  color: var(--warning-text);
+}
+
+.review-version-banner--published {
+  background: rgba(80, 192, 208, 0.08);
+  border-bottom-color: rgba(80, 192, 208, 0.22);
+}
+
+.review-version-banner--working {
+  background: rgba(201, 144, 53, 0.08);
+  border-bottom-color: rgba(201, 144, 53, 0.22);
+  color: var(--warning-text);
+  font-weight: 600;
+}
+
+.review-version-banner--stale,
+.review-version-banner--conflict {
+  background: rgba(196, 68, 68, 0.08);
+  border-bottom-color: rgba(196, 68, 68, 0.22);
+  color: var(--error-text);
+}
+
+.review-resolved-notice {
+  color: var(--success-text);
+  background: rgba(90, 170, 144, 0.08);
+}
+
+.review-update-tag {
+  font-size: 9.5px;
+  color: var(--accent-text);
+  line-height: 1.4;
+}
+
+.review-table tbody tr.row-excluded {
+  opacity: 0.72;
+}
+
+.review-table tbody tr[data-saving='true'] {
+  opacity: 0.7;
+}
+
+.review-location-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.review-location-map {
+  height: 160px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--bg-base);
+}
+
+.review-location-leaflet {
+  height: 160px;
+  width: 100%;
+}
+
+.review-location-coords {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  font-size: 11px;
+}
+
 .review-inspector {
-  width: 264px;
+  width: 280px;
+
   flex-shrink: 0;
   display: flex;
   flex-direction: column;

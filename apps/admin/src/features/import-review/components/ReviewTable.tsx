@@ -6,6 +6,7 @@ import {
   REVIEW_ISSUE_PRESENTATION,
   REVIEW_STATE_PRESENTATION,
 } from '@/features/import-review/presentation';
+import { formatResolvedLocation } from '@/features/import-review/review-model';
 import type { ReviewIssue, ReviewTask } from '@/features/import-review/review-types';
 
 function IssueBadge({ issue }: { issue: ReviewIssue }) {
@@ -21,6 +22,9 @@ type ReviewTableProps = {
   someVisibleChecked: boolean;
   emptyMessage: string;
   isDatasetEmpty: boolean;
+  pendingIds?: string[];
+  failedIds?: string[];
+  recentlyResolvedIds?: string[];
   onClearFilters?: () => void;
   onInspect: (task: ReviewTask) => void;
   onToggleChecked: (id: string) => void;
@@ -35,6 +39,9 @@ export function ReviewTable({
   someVisibleChecked,
   emptyMessage,
   isDatasetEmpty,
+  pendingIds = [],
+  failedIds = [],
+  recentlyResolvedIds = [],
   onClearFilters,
   onInspect,
   onToggleChecked,
@@ -86,7 +93,11 @@ export function ReviewTable({
                 <td colSpan={9} className="!py-8 text-center !text-[var(--text-muted)]">
                   <div className="flex flex-col items-center gap-2">
                     <span>{emptyMessage}</span>
-                    {onClearFilters ? <Button variant="subtle" size="sm" onClick={onClearFilters}>پاک کردن فیلترها</Button> : null}
+                    {onClearFilters ? (
+                      <Button variant="subtle" size="sm" onClick={onClearFilters}>
+                        پاک کردن فیلترها
+                      </Button>
+                    ) : null}
                   </div>
                 </td>
               </tr>
@@ -94,17 +105,23 @@ export function ReviewTable({
               tasks.map((task) => {
                 const presentation = REVIEW_STATE_PRESENTATION[task.state];
                 const inspected = inspectedId === task.id;
+                const saving = pendingIds.includes(task.id);
+                const saveFailed = failedIds.includes(task.id);
+                const recentlyResolved = recentlyResolvedIds.includes(task.id);
+                const coords = formatResolvedLocation(task);
                 const rowTone =
-                  task.state === 'error'
+                  saveFailed || task.state === 'error'
                     ? 'row-error'
-                    : task.state === 'review'
-                      ? 'row-warning'
-                      : 'row-normal';
+                    : task.state === 'excluded'
+                      ? 'row-excluded'
+                      : task.state === 'review'
+                        ? 'row-warning'
+                        : 'row-normal';
                 return (
                   <tr
-                    key={task.id}
+                    key={task.reviewItemId}
                     className={
-                      inspected && task.state === 'error'
+                      inspected && (saveFailed || task.state === 'error')
                         ? 'row-selected row-selected-error'
                         : inspected && task.state === 'review'
                           ? 'row-selected row-selected-warning'
@@ -112,6 +129,9 @@ export function ReviewTable({
                             ? 'row-selected'
                             : rowTone
                     }
+                    data-saving={saving || undefined}
+                    data-save-failed={saveFailed || undefined}
+                    data-recently-resolved={recentlyResolved || undefined}
                     onClick={() => onInspect(task)}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
@@ -130,16 +150,22 @@ export function ReviewTable({
                       />
                     </td>
                     <td>
-                      <LtrData className="text-[11.5px] text-[var(--text-muted)]">
-                        {task.id}
-                      </LtrData>
+                      <div className="flex flex-col gap-0.5">
+                        <LtrData className="text-[11.5px] text-[var(--text-muted)]">
+                          {task.externalOrderId}
+                        </LtrData>
+                        {task.dataUpdateTag === 'new' ? (
+                          <span className="review-update-tag">سفارش جدید از آخرین واردات</span>
+                        ) : null}
+                        {task.dataUpdateTag === 'updated' ? (
+                          <span className="review-update-tag">به‌روزرسانی از آخرین واردات</span>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="font-medium">{task.name}</td>
                     <td>
                       <LtrData
-                        className={
-                          task.issues.includes('phone') ? 'text-[var(--warning-text)]' : ''
-                        }
+                        className={task.issues.includes('phone') ? 'text-[var(--warning-text)]' : ''}
                       >
                         {task.phone}
                       </LtrData>
@@ -148,10 +174,10 @@ export function ReviewTable({
                       {task.address}
                     </td>
                     <td>
-                      {task.coordinates ? (
+                      {coords ? (
                         <span className="review-location review-location--ready">
                           <Icon d={ICONS.map_pin} size={11} />
-                          <LtrData>{task.coordinates}</LtrData>
+                          <LtrData>{coords}</LtrData>
                         </span>
                       ) : (
                         <span className="review-location review-location--error">
@@ -168,7 +194,15 @@ export function ReviewTable({
                       </div>
                     </td>
                     <td>
-                      <StatusBadge tone={presentation.tone} label={presentation.label} />
+                      {saving ? (
+                        <StatusBadge tone="info" label="در حال ذخیره" />
+                      ) : saveFailed ? (
+                        <StatusBadge tone="error" label="ذخیره ناموفق" />
+                      ) : recentlyResolved ? (
+                        <StatusBadge tone="success" label="به‌تازگی بررسی شد" />
+                      ) : (
+                        <StatusBadge tone={presentation.tone} label={presentation.label} />
+                      )}
                     </td>
                     <td>
                       <Button
