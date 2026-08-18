@@ -49,6 +49,10 @@ vi.mock('@/shared/config/env', () => ({
   },
 }));
 
+vi.mock('@/features/execution/components/ExecutionMap', () => ({
+  ExecutionMap: () => <div data-testid="execution-map-stub">execution-map</div>,
+}));
+
 vi.mock('@/features/planning/components/PlanningMap', () => ({
   PlanningMap: ({
     fixture,
@@ -338,9 +342,9 @@ describe('Planning workspace', () => {
     renderPlanningPage();
 
     expect(await screen.findAllByText(PLANNING_PLAN_FIXTURE.planName)).not.toHaveLength(0);
-    expect(screen.getByRole('button', { name: /برنامه‌ریزی و تخصیص/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /برنامه‌ریزی و تخصیص/ })).toHaveAttribute(
       'aria-current',
-      'step',
+      'page',
     );
     expect(screen.getByTestId('planning-body')).toHaveAttribute('data-generation-phase', 'ready');
     expect(screen.getByTestId('generation-panel')).toBeInTheDocument();
@@ -354,9 +358,9 @@ describe('Planning workspace', () => {
 
     expect(await screen.findAllByText(PLANNING_PLAN_FIXTURE.planName)).toHaveLength(2);
     expect(router.state.location.pathname).toBe('/plans/P-2404/planning');
-    expect(screen.getByRole('button', { name: /برنامه‌ریزی و تخصیص/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /برنامه‌ریزی و تخصیص/ })).toHaveAttribute(
       'aria-current',
-      'step',
+      'page',
     );
     const top = document.querySelector('.admin-shell-top');
     expect(top).not.toBeNull();
@@ -369,9 +373,9 @@ describe('Planning workspace', () => {
   it('navigates Planning → Review while preserving planId', async () => {
     const user = userEvent.setup();
     const { router } = renderPlanningPage('P-2404');
-    await screen.findByRole('button', { name: /برنامه‌ریزی و تخصیص/ });
+    await screen.findByRole('link', { name: /برنامه‌ریزی و تخصیص/ });
 
-    await user.click(screen.getByRole('button', { name: /بررسی داده/ }));
+    await user.click(screen.getByRole('link', { name: /بررسی داده/ }));
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/plans/P-2404/review'),
     );
@@ -389,18 +393,18 @@ describe('Planning workspace', () => {
       </AppProviders>,
     );
 
-    await screen.findByRole('button', { name: /بررسی داده/ });
+    await screen.findByRole('link', { name: /بررسی داده/ });
     const plan = await port.getPlan('P-2404');
     expect(plan).toMatchObject({ currentStage: 'planning', status: 'planning_active' });
 
-    await user.click(screen.getByRole('button', { name: /برنامه‌ریزی و تخصیص/ }));
+    await user.click(screen.getByRole('link', { name: /برنامه‌ریزی و تخصیص/ }));
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/plans/P-2404/planning'),
     );
     expect(await screen.findByTestId('planning-map')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /برنامه‌ریزی و تخصیص/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /برنامه‌ریزی و تخصیص/ })).toHaveAttribute(
       'aria-current',
-      'step',
+      'page',
     );
   });
 
@@ -416,8 +420,8 @@ describe('Planning workspace', () => {
       </AppProviders>,
     );
 
-    await screen.findByRole('button', { name: /ورود داده/ });
-    await user.click(screen.getByRole('button', { name: /برنامه‌ریزی و تخصیص/ }));
+    await screen.findByRole('link', { name: /داده‌های برنامه/ });
+    await user.click(screen.getByRole('link', { name: /برنامه‌ریزی و تخصیص/ }));
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/plans/P-2404/planning'),
     );
@@ -678,9 +682,9 @@ describe('Planning workspace', () => {
       </AppProviders>,
     );
 
-    await screen.findByRole('button', { name: /ورود داده/ });
-    await user.click(screen.getByRole('button', { name: /برنامه‌ریزی و تخصیص/ }));
-    expect(router.state.location.pathname).toBe('/plans/P-2407/intake');
+    await screen.findByRole('link', { name: /داده‌های برنامه/ });
+    await user.click(screen.getByRole('link', { name: /برنامه‌ریزی و تخصیص/ }));
+    expect(router.state.location.pathname).toBe('/plans/P-2407/planning');
   });
 });
 
@@ -715,7 +719,7 @@ describe('distribution area generation', () => {
     expect(input).toHaveValue(5);
   });
 
-  it('transitions submitting → generating → generated and reveals polygons', async () => {
+  it('starts generation asynchronously and reveals polygons when generated', async () => {
     const user = userEvent.setup();
     render(
       <PlanningWorkspace
@@ -724,21 +728,12 @@ describe('distribution area generation', () => {
       />,
     );
 
-    await user.click(screen.getByTestId('start-generation'));
-    expect(screen.getByTestId('planning-body')).toHaveAttribute(
-      'data-generation-phase',
-      'submitting',
-    );
-    expect(screen.getByTestId('generation-progress')).toBeInTheDocument();
-    expect(screen.getByTestId('generation-busy-pill')).toBeInTheDocument();
-    expect(screen.queryByTestId('start-generation')).not.toBeInTheDocument();
+    expect(screen.getByTestId('planning-body')).toHaveAttribute('data-generation-phase', 'ready');
 
-    await waitFor(() =>
-      expect(screen.getByTestId('planning-body')).toHaveAttribute(
-        'data-generation-phase',
-        'generating',
-      ),
-    );
+    await user.click(screen.getByTestId('start-generation'));
+    // `submitting` is a 20ms fixture-local phase. `userEvent.click` can outlast it,
+    // so do not assert that transient value against wall-clock timing.
+    expect(screen.queryByTestId('start-generation')).not.toBeInTheDocument();
 
     await waitFor(() =>
       expect(screen.getByTestId('planning-body')).toHaveAttribute(
@@ -763,11 +758,7 @@ describe('distribution area generation', () => {
 
     await user.click(screen.getByTestId('start-generation'));
     expect(screen.queryByTestId('start-generation')).not.toBeInTheDocument();
-    expect(screen.getByTestId('planning-body')).toHaveAttribute(
-      'data-generation-phase',
-      'submitting',
-    );
-    // CTA removed while busy — no second submission path.
+    // CTA removed once generation has started — no second submission path.
     expect(screen.queryByTestId('start-generation-retry')).not.toBeInTheDocument();
   });
 });
@@ -803,10 +794,6 @@ describe('distribution area generation retry', () => {
 
     await user.click(screen.getByTestId('allow-success'));
     await user.click(screen.getByTestId('generation-retry'));
-    expect(screen.getByTestId('planning-body')).toHaveAttribute(
-      'data-generation-phase',
-      'submitting',
-    );
     await waitFor(() =>
       expect(screen.getByTestId('planning-body')).toHaveAttribute(
         'data-generation-phase',

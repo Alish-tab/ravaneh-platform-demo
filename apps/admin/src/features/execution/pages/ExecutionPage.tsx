@@ -1,20 +1,18 @@
 import { useParams } from 'react-router-dom';
 
-import { PlanningWorkspace } from '@/features/planning/components/PlanningWorkspace';
-import { getPlanningFixture } from '@/features/planning/fixture/planning-fixture';
+import { ExecutionWorkspace } from '@/features/execution/components/ExecutionWorkspace';
+import { useExecutionData } from '@/features/execution/hooks/useExecutionData';
 import { PlanContextHeader } from '@/features/plans/components/PlanContextHeader';
 import { usePlan } from '@/features/plans/hooks/usePlansData';
 import { Button, InlineMessage } from '@/shared/ui';
-import '@/features/planning/styles/planning.css';
+import '@/features/execution/styles/execution.css';
 
-/**
- * Plan-scoped planning workspace at `/plans/:planId/planning`.
- */
-export function PlanningPage() {
+export function ExecutionPage() {
   const { planId } = useParams<{ planId: string }>();
-  const { plan, status, reload } = usePlan(planId);
+  const { plan, status: planStatus, reload: reloadPlan } = usePlan(planId);
+  const execution = useExecutionData(planId);
 
-  if (status === 'loading') {
+  if (planStatus === 'loading') {
     return (
       <div className="plan-workspace-page p-6">
         <InlineMessage tone="info">در حال بارگذاری برنامه…</InlineMessage>
@@ -22,19 +20,18 @@ export function PlanningPage() {
     );
   }
 
-  if (status === 'error') {
+  if (planStatus === 'error') {
     return (
       <div className="plan-workspace-page flex flex-col items-start gap-3 p-6">
         <InlineMessage tone="error">بارگذاری برنامه ناموفق بود.</InlineMessage>
-
-        <Button variant="secondary" size="sm" onClick={() => void reload()}>
+        <Button variant="secondary" size="sm" onClick={() => void reloadPlan()}>
           تلاش مجدد
         </Button>
       </div>
     );
   }
 
-  if (status === 'missing' || !plan) {
+  if (planStatus === 'missing' || !plan) {
     return (
       <div className="plan-workspace-page p-6">
         <InlineMessage tone="error">برنامه یافت نشد.</InlineMessage>
@@ -42,17 +39,18 @@ export function PlanningPage() {
     );
   }
 
-  const fixture = getPlanningFixture(plan.id, {
-    planName: plan.name,
-  });
-
   return (
     <div className="plan-workspace-page">
       <PlanContextHeader plan={plan} />
-
-      <PlanningWorkspace
-        key={plan.id}
-        initialFixture={fixture}
+      <ExecutionWorkspace
+        snapshot={execution.snapshot}
+        status={execution.status}
+        errorKind={execution.errorKind}
+        isRefreshing={execution.isRefreshing}
+        systemNotice={execution.systemNotice}
+        onRetry={() => void execution.reload()}
+        searchOrder={execution.searchOrder}
+        saveFollowupNote={execution.saveFollowupNote}
       />
     </div>
   );

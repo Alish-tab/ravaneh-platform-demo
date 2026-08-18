@@ -67,9 +67,9 @@
 .seg-control {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
   padding: 2px;
-  background: var(--bg-panel);
+  background: var(--bg-elevated);
   border: 1px solid var(--border-default);
   border-radius: var(--r-sm);
 }
@@ -80,8 +80,8 @@
   color: var(--text-secondary);
   font-family: var(--font-primary);
   font-size: 12px;
-  padding: 4px 9px;
-  border-radius: var(--r-xs);
+  padding: 4px 11px;
+  border-radius: calc(var(--r-sm) - 1px);
   cursor: pointer;
 }
 
@@ -98,16 +98,16 @@
 .skeleton {
   background: linear-gradient(
     90deg,
-    var(--bg-surface) 0%,
+    var(--bg-surface) 25%,
     var(--bg-hover) 50%,
-    var(--bg-surface) 100%
+    var(--bg-surface) 75%
   );
   background-size: 200% 100%;
-  animation: plans-skeleton 1.2s ease-in-out infinite;
+  animation: shimmer 1.8s ease-in-out infinite;
   border-radius: 3px;
 }
 
-@keyframes plans-skeleton {
+@keyframes shimmer {
   0% {
     background-position: 200% 0;
   }

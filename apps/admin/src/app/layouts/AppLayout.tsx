@@ -4,17 +4,16 @@ import { Outlet, useLocation, useMatch } from 'react-router-dom';
 import { GlobalNavigation } from '@/app/layouts/GlobalNavigation';
 import { GlobalTopContext } from '@/app/layouts/GlobalTopContext';
 import { usePlan } from '@/features/plans/hooks/usePlansData';
+import { isPlanWorkspaceStage } from '@/features/plans/plan-stage-path';
 import '@/app/styles/admin-shell.css';
 import '@/features/plans/styles/plan-workspace.css';
-
-const PLAN_WORKSPACE_STAGES = new Set(['intake', 'review', 'planning']);
 
 function useShellTopContext() {
   const location = useLocation();
   const planWorkspaceMatch = useMatch('/plans/:planId/:stage');
   const stage = planWorkspaceMatch?.params.stage;
   const planMatch =
-    stage && PLAN_WORKSPACE_STAGES.has(stage) ? planWorkspaceMatch : null;
+    stage && isPlanWorkspaceStage(stage) ? planWorkspaceMatch : null;
   const planId = planMatch?.params.planId;
   const { plan } = usePlan(planId);
 
@@ -25,24 +24,31 @@ function useShellTopContext() {
         breadcrumb: 'برنامه‌ها' as string | undefined,
       };
     }
+
     if (location.pathname.startsWith('/plans')) {
       return { title: 'برنامه‌ها', breadcrumb: undefined };
     }
+
     if (location.pathname.startsWith('/ops')) {
       return { title: 'عملیات جاری', breadcrumb: undefined };
     }
+
     if (location.pathname.startsWith('/drivers')) {
       return { title: 'رانندگان', breadcrumb: undefined };
     }
+
     if (location.pathname.startsWith('/imports')) {
       return { title: 'ایمپورت', breadcrumb: undefined };
     }
+
     if (location.pathname.startsWith('/foundation')) {
       return { title: 'Foundation Smoke', breadcrumb: undefined };
     }
+
     if (location.pathname.startsWith('/map')) {
       return { title: 'نقشه (Smoke)', breadcrumb: undefined };
     }
+
     return { title: 'روانه', breadcrumb: undefined };
   }, [location.pathname, plan?.name, planMatch]);
 }
@@ -57,8 +63,10 @@ export function AppLayout() {
         collapsed={navCollapsed}
         onToggle={() => setNavCollapsed((value) => !value)}
       />
+
       <div className="admin-shell-main">
         <GlobalTopContext title={top.title} breadcrumb={top.breadcrumb} />
+
         <div className="admin-shell-workspace">
           <Outlet />
         </div>

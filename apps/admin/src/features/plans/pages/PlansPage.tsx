@@ -14,6 +14,7 @@ import {
 import { PlansToolbar } from '@/features/plans/components/PlansToolbar';
 import { usePlansDataPort } from '@/features/plans/fixture/usePlansFixture';
 import { usePlansList } from '@/features/plans/hooks/usePlansData';
+import { planStagePath } from '@/features/plans/plan-stage-path';
 import '@/features/plans/styles/plans.css';
 
 export function PlansPage() {
@@ -43,15 +44,7 @@ export function PlansPage() {
   }, [plans, search, stageFilter]);
 
   const openPlan = (plan: A01PlanViewModel) => {
-    if (plan.currentStage === 'review') {
-      navigate(`/plans/${plan.id}/review`);
-      return;
-    }
-    if (plan.currentStage === 'planning' || plan.currentStage === 'execution') {
-      navigate(`/plans/${plan.id}/planning`);
-      return;
-    }
-    navigate(`/plans/${plan.id}/intake`);
+    navigate(planStagePath(plan.id, plan.currentStage));
   };
 
   return (
