@@ -38,9 +38,9 @@ describe('Planning map render path', () => {
     expect(await screen.findByTestId('planning-body')).toBeInTheDocument();
     expect(screen.getByTestId('planning-map-pane')).toBeInTheDocument();
     expect(screen.getByTestId('generation-panel')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /برنامه‌ریزی و تخصیص/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /برنامه‌ریزی و تخصیص/ })).toHaveAttribute(
       'aria-current',
-      'step',
+      'page',
     );
 
     const leaflet = document.querySelector('.leaflet-container');

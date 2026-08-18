@@ -7,7 +7,7 @@ import { usePlan } from '@/features/plans/hooks/usePlansData';
 import '@/app/styles/admin-shell.css';
 import '@/features/plans/styles/plan-workspace.css';
 
-const PLAN_WORKSPACE_STAGES = new Set(['intake', 'review', 'planning']);
+const PLAN_WORKSPACE_STAGES = new Set(['intake', 'review', 'planning', 'execution']);
 
 function useShellTopContext() {
   const location = useLocation();

@@ -338,9 +338,9 @@ describe('Planning workspace', () => {
     renderPlanningPage();
 
     expect(await screen.findAllByText(PLANNING_PLAN_FIXTURE.planName)).not.toHaveLength(0);
-    expect(screen.getByRole('button', { name: /برنامه‌ریزی و تخصیص/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /برنامه‌ریزی و تخصیص/ })).toHaveAttribute(
       'aria-current',
-      'step',
+      'page',
     );
     expect(screen.getByTestId('planning-body')).toHaveAttribute('data-generation-phase', 'ready');
     expect(screen.getByTestId('generation-panel')).toBeInTheDocument();
@@ -354,9 +354,9 @@ describe('Planning workspace', () => {
 
     expect(await screen.findAllByText(PLANNING_PLAN_FIXTURE.planName)).toHaveLength(2);
     expect(router.state.location.pathname).toBe('/plans/P-2404/planning');
-    expect(screen.getByRole('button', { name: /برنامه‌ریزی و تخصیص/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /برنامه‌ریزی و تخصیص/ })).toHaveAttribute(
       'aria-current',
-      'step',
+      'page',
     );
     const top = document.querySelector('.admin-shell-top');
     expect(top).not.toBeNull();
@@ -369,9 +369,9 @@ describe('Planning workspace', () => {
   it('navigates Planning → Review while preserving planId', async () => {
     const user = userEvent.setup();
     const { router } = renderPlanningPage('P-2404');
-    await screen.findByRole('button', { name: /برنامه‌ریزی و تخصیص/ });
+    await screen.findByRole('link', { name: /برنامه‌ریزی و تخصیص/ });
 
-    await user.click(screen.getByRole('button', { name: /بررسی داده/ }));
+    await user.click(screen.getByRole('link', { name: /بررسی داده/ }));
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/plans/P-2404/review'),
     );
@@ -389,18 +389,18 @@ describe('Planning workspace', () => {
       </AppProviders>,
     );
 
-    await screen.findByRole('button', { name: /بررسی داده/ });
+    await screen.findByRole('link', { name: /بررسی داده/ });
     const plan = await port.getPlan('P-2404');
     expect(plan).toMatchObject({ currentStage: 'planning', status: 'planning_active' });
 
-    await user.click(screen.getByRole('button', { name: /برنامه‌ریزی و تخصیص/ }));
+    await user.click(screen.getByRole('link', { name: /برنامه‌ریزی و تخصیص/ }));
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/plans/P-2404/planning'),
     );
     expect(await screen.findByTestId('planning-map')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /برنامه‌ریزی و تخصیص/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /برنامه‌ریزی و تخصیص/ })).toHaveAttribute(
       'aria-current',
-      'step',
+      'page',
     );
   });
 
@@ -416,8 +416,8 @@ describe('Planning workspace', () => {
       </AppProviders>,
     );
 
-    await screen.findByRole('button', { name: /ورود داده/ });
-    await user.click(screen.getByRole('button', { name: /برنامه‌ریزی و تخصیص/ }));
+    await screen.findByRole('link', { name: /داده‌های برنامه/ });
+    await user.click(screen.getByRole('link', { name: /برنامه‌ریزی و تخصیص/ }));
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/plans/P-2404/planning'),
     );
@@ -678,9 +678,9 @@ describe('Planning workspace', () => {
       </AppProviders>,
     );
 
-    await screen.findByRole('button', { name: /ورود داده/ });
-    await user.click(screen.getByRole('button', { name: /برنامه‌ریزی و تخصیص/ }));
-    expect(router.state.location.pathname).toBe('/plans/P-2407/intake');
+    await screen.findByRole('link', { name: /داده‌های برنامه/ });
+    await user.click(screen.getByRole('link', { name: /برنامه‌ریزی و تخصیص/ }));
+    expect(router.state.location.pathname).toBe('/plans/P-2407/planning');
   });
 });
 

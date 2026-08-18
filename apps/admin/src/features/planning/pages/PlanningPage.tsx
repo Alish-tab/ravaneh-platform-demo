@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
 import { PlanningWorkspace } from '@/features/planning/components/PlanningWorkspace';
 import { getPlanningFixture } from '@/features/planning/fixture/planning-fixture';
@@ -12,7 +12,6 @@ import '@/features/planning/styles/planning.css';
  */
 export function PlanningPage() {
   const { planId } = useParams<{ planId: string }>();
-  const navigate = useNavigate();
   const { plan, status, reload } = usePlan(planId);
 
   if (status === 'loading') {
@@ -48,11 +47,6 @@ export function PlanningPage() {
     <div className="plan-workspace-page">
       <PlanContextHeader
         plan={plan}
-        activeStage="planning"
-        onStageChange={(stage) => {
-          if (stage === 'intake') navigate(`/plans/${plan.id}/intake`);
-          if (stage === 'review') navigate(`/plans/${plan.id}/review`);
-        }}
       />
       <PlanningWorkspace key={plan.id} initialFixture={fixture} />
     </div>

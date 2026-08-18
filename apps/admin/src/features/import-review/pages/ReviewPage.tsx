@@ -40,16 +40,6 @@ export function ReviewPage() {
     }
   };
 
-  const goToPlanningStage = () => {
-    if (!plan) return;
-    /* Plan already past Review — navigate without re-checking Review fixture actions. */
-    if (plan.currentStage === 'planning' || plan.currentStage === 'execution') {
-      navigate(`/plans/${plan.id}/planning`);
-      return;
-    }
-    void continueToPlanning();
-  };
-
   if (status === 'loading')
     return (
       <div className="plan-workspace-page p-6">
@@ -82,11 +72,6 @@ export function ReviewPage() {
     <div className="plan-workspace-page">
       <PlanContextHeader
         plan={plan}
-        activeStage="review"
-        onStageChange={(stage) => {
-          if (stage === 'intake') navigate(`/plans/${plan.id}/intake`);
-          if (stage === 'planning') goToPlanningStage();
-        }}
       />
       <ReviewSummaryToolbar
         activeTab={review.activeTab}
