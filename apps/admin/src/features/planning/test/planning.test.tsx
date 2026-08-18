@@ -49,6 +49,10 @@ vi.mock('@/shared/config/env', () => ({
   },
 }));
 
+vi.mock('@/features/execution/components/ExecutionMap', () => ({
+  ExecutionMap: () => <div data-testid="execution-map-stub">execution-map</div>,
+}));
+
 vi.mock('@/features/planning/components/PlanningMap', () => ({
   PlanningMap: ({
     fixture,

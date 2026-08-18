@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-do
 
 import { AppLayout } from '@/app/layouts/AppLayout';
 import { DriversPage } from '@/features/drivers/pages/DriversPage';
+import { ExecutionPage } from '@/features/execution/pages/ExecutionPage';
 import { FoundationSmokePage } from '@/features/foundation-smoke/pages/FoundationSmokePage';
 import { ImportsPage } from '@/features/import-review/pages/ImportsPage';
 import { ReviewPage } from '@/features/import-review/pages/ReviewPage';
@@ -22,6 +23,7 @@ export const appRoutes: RouteObject[] = [
       { path: 'plans/:planId/intake', element: <PlanIntakePage /> },
       { path: 'plans/:planId/review', element: <ReviewPage /> },
       { path: 'plans/:planId/planning', element: <PlanningPage /> },
+      { path: 'plans/:planId/execution', element: <ExecutionPage /> },
       { path: 'ops', element: <OpsPage /> },
       { path: 'drivers', element: <DriversPage /> },
       /* Retained routes — not in product navigation */

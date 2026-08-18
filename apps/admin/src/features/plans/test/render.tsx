@@ -18,6 +18,10 @@ vi.mock('@/features/planning/components/PlanningMap', () => ({
   PlanningMap: () => <div data-testid="planning-map-stub">planning-map</div>,
 }));
 
+vi.mock('@/features/execution/components/ExecutionMap', () => ({
+  ExecutionMap: () => <div data-testid="execution-map-stub">execution-map</div>,
+}));
+
 vi.mock('@/shared/config/env', () => ({
   env: {
     apiBaseUrl: 'http://localhost:8080',

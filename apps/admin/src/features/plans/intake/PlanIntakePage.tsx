@@ -1,11 +1,19 @@
 ﻿import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
 
 import { Button, InlineMessage } from '@/shared/ui';
 
 import { PlanContextHeader } from '@/features/plans/components/PlanContextHeader';
 import { usePlansDataPort } from '@/features/plans/fixture/usePlansFixture';
-import { buildParsedImportedFile, statusAfterParse } from '@/features/plans/fixture/plans-fixture';
+import {
+  buildParsedImportedFile,
+  statusAfterParse,
+} from '@/features/plans/fixture/plans-fixture';
 import { usePlan } from '@/features/plans/hooks/usePlansData';
 import { ImportDropzone } from '@/features/plans/intake/components/ImportDropzone';
 import {
@@ -38,10 +46,13 @@ export function PlanIntakePage() {
   const port = usePlansDataPort();
   const { plan, status, reload } = usePlan(planId);
 
-  const [viewState, setViewState] = useState<IntakeViewState>({ kind: 'idle' });
+  const [viewState, setViewState] = useState<IntakeViewState>({
+    kind: 'idle',
+  });
   const [staleDismissed, setStaleDismissed] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [isReplacing, setIsReplacing] = useState(false);
+
   const timerRef = useRef<number | null>(null);
   const processTimerRef = useRef<number | null>(null);
   const initializedForId = useRef<string | null>(null);
@@ -51,6 +62,7 @@ export function PlanIntakePage() {
       window.clearInterval(timerRef.current);
       timerRef.current = null;
     }
+
     if (processTimerRef.current !== null) {
       window.clearTimeout(processTimerRef.current);
       processTimerRef.current = null;
@@ -62,39 +74,64 @@ export function PlanIntakePage() {
   useEffect(() => {
     if (status !== 'ready' || !plan) return;
     if (initializedForId.current === plan.id) return;
+
     initializedForId.current = plan.id;
     setViewState(deriveInitialIntakeState(plan));
     setStaleDismissed(false);
   }, [plan, status]);
 
-  const showStale = searchParams.get('stale') === '1' && !staleDismissed;
+  const showStale =
+    searchParams.get('stale') === '1' && !staleDismissed;
 
   const goToReviewHandoff = () => {
-    if (planId) navigate(`/plans/${planId}/review`);
+    if (planId) {
+      navigate(`/plans/${planId}/review`);
+    }
   };
 
-  const finishParse = async (fileName: string, replacement: boolean) => {
+  const finishParse = async (
+    fileName: string,
+    replacement: boolean,
+  ) => {
     if (!plan) return;
+
     const previousFile = plan.importedFile;
-    const structural = fixtureStructuralErrorFromFileName(fileName);
+    const structural =
+      fixtureStructuralErrorFromFileName(fileName);
+
     if (structural) {
       if (replacement && previousFile) {
         // Preserve previous dataset visually — Backend mutation semantics deferred.
-        setViewState({ kind: 'replacement-upload-failed', previousFile });
+        setViewState({
+          kind: 'replacement-upload-failed',
+          previousFile,
+        });
         setIsReplacing(false);
         return;
       }
+
       await port.updatePlan(plan.id, {
         status: 'intake_failed',
         lastChanged: 'همین الان',
       });
-      setViewState({ kind: 'structural-error', errorType: structural });
+
+      setViewState({
+        kind: 'structural-error',
+        errorType: structural,
+      });
+
       setIsReplacing(false);
       return;
     }
 
-    const outcome = fixtureParseOutcomeFromFileName(fileName);
-    const importedFile = buildParsedImportedFile({ fileName, outcome });
+    const outcome =
+      fixtureParseOutcomeFromFileName(fileName);
+
+    const importedFile = buildParsedImportedFile({
+      fileName,
+      outcome,
+    });
+
     await port.updatePlan(plan.id, {
       status: statusAfterParse(outcome),
       currentStage: 'review',
@@ -102,11 +139,20 @@ export function PlanIntakePage() {
       importedFile,
       lastChanged: 'همین الان',
     });
+
     setIsReplacing(false);
-    setViewState(outcome === 'clean' ? { kind: 'import-clean' } : { kind: 'import-result' });
+
+    setViewState(
+      outcome === 'clean'
+        ? { kind: 'import-clean' }
+        : { kind: 'import-result' },
+    );
   };
 
-  const startUpload = (file: File, replacement: boolean) => {
+  const startUpload = (
+    file: File,
+    replacement: boolean,
+  ) => {
     clearTimers();
     setPendingFile(file);
 
@@ -117,8 +163,13 @@ export function PlanIntakePage() {
           previousFile: plan.importedFile,
         });
       } else {
-        setViewState({ kind: 'upload-failed', fileName: file.name, isReplacement: replacement });
+        setViewState({
+          kind: 'upload-failed',
+          fileName: file.name,
+          isReplacement: replacement,
+        });
       }
+
       return;
     }
 
@@ -128,15 +179,31 @@ export function PlanIntakePage() {
       fileName: file.name,
       isReplacement: replacement,
     });
-    void port.updatePlan(plan!.id, { status: 'uploading', lastChanged: 'همین الان' });
+
+    void port.updatePlan(plan!.id, {
+      status: 'uploading',
+      lastChanged: 'همین الان',
+    });
 
     let prog = 0;
+
     timerRef.current = window.setInterval(() => {
       prog += 18 + Math.random() * 12;
+
       if (prog >= 100) {
         clearTimers();
-        setViewState({ kind: 'processing', fileName: file.name, isReplacement: replacement });
-        void port.updatePlan(plan!.id, { status: 'process', lastChanged: 'همین الان' });
+
+        setViewState({
+          kind: 'processing',
+          fileName: file.name,
+          isReplacement: replacement,
+        });
+
+        void port.updatePlan(plan!.id, {
+          status: 'process',
+          lastChanged: 'همین الان',
+        });
+
         processTimerRef.current = window.setTimeout(() => {
           void finishParse(file.name, replacement);
         }, 700);
@@ -153,11 +220,17 @@ export function PlanIntakePage() {
 
   const onFileSelected = (file: File) => {
     if (!plan) return;
+
     if (plan.importedFile?.name === file.name) {
-      setViewState({ kind: 'structural-error', errorType: 'duplicate-file' });
+      setViewState({
+        kind: 'structural-error',
+        errorType: 'duplicate-file',
+      });
       return;
     }
+
     setPendingFile(file);
+
     setViewState({
       kind: 'file-selected',
       fileName: file.name,
@@ -168,7 +241,9 @@ export function PlanIntakePage() {
   if (status === 'loading') {
     return (
       <div className="plan-workspace-page p-6">
-        <InlineMessage tone="info">در حال بارگذاری برنامه…</InlineMessage>
+        <InlineMessage tone="info">
+          در حال بارگذاری برنامه…
+        </InlineMessage>
       </div>
     );
   }
@@ -176,7 +251,10 @@ export function PlanIntakePage() {
   if (status === 'missing' || !plan) {
     return (
       <div className="plan-workspace-page flex flex-col items-start gap-3 p-6">
-        <InlineMessage tone="error">برنامه یافت نشد.</InlineMessage>
+        <InlineMessage tone="error">
+          برنامه یافت نشد.
+        </InlineMessage>
+
         <Link to="/plans">
           <Button variant="secondary" size="sm">
             بازگشت به برنامه‌ها
@@ -189,8 +267,15 @@ export function PlanIntakePage() {
   if (status === 'error') {
     return (
       <div className="plan-workspace-page flex flex-col items-start gap-3 p-6">
-        <InlineMessage tone="error">بارگذاری برنامه ناموفق بود.</InlineMessage>
-        <Button variant="secondary" size="sm" onClick={() => void reload()}>
+        <InlineMessage tone="error">
+          بارگذاری برنامه ناموفق بود.
+        </InlineMessage>
+
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => void reload()}
+        >
           تلاش مجدد
         </Button>
       </div>
@@ -201,14 +286,15 @@ export function PlanIntakePage() {
     plan.importedFile ??
     buildParsedImportedFile({
       fileName: 'orders_demo.xlsx',
-      outcome: viewState.kind === 'import-clean' ? 'clean' : 'needs_review',
+      outcome:
+        viewState.kind === 'import-clean'
+          ? 'clean'
+          : 'needs_review',
     });
 
   return (
     <div className="plan-workspace-page">
-      <PlanContextHeader
-        plan={plan}
-      />
+      <PlanContextHeader plan={plan} />
 
       <div className="flex-1 overflow-y-auto px-7 py-6">
         <div className="mx-auto flex max-w-[680px] flex-col gap-4">
@@ -222,7 +308,10 @@ export function PlanIntakePage() {
           ) : null}
 
           <div>
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">ورود داده</h2>
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+              ورود داده
+            </h2>
+
             <p className="mt-1 text-xs text-[var(--text-secondary)]">
               فایل اکسل داده‌های تحویل را بارگذاری کنید
             </p>
@@ -230,7 +319,11 @@ export function PlanIntakePage() {
 
           <div className="divider" />
 
-          {viewState.kind === 'idle' ? <ImportDropzone onFileSelected={onFileSelected} /> : null}
+          {viewState.kind === 'idle' ? (
+            <ImportDropzone
+              onFileSelected={onFileSelected}
+            />
+          ) : null}
 
           {viewState.kind === 'file-selected' ? (
             <SelectedFilePanel
@@ -241,48 +334,77 @@ export function PlanIntakePage() {
                 setViewState({ kind: 'idle' });
               }}
               onUpload={() => {
-                if (pendingFile) startUpload(pendingFile, isReplacing);
+                if (pendingFile) {
+                  startUpload(
+                    pendingFile,
+                    isReplacing,
+                  );
+                }
               }}
             />
           ) : null}
 
           {viewState.kind === 'uploading' ? (
-            <UploadProgressState progress={viewState.progress} />
+            <UploadProgressState
+              progress={viewState.progress}
+            />
           ) : null}
 
           {viewState.kind === 'upload-failed' ? (
             <UploadFailedState
               fileName={viewState.fileName}
               onRetry={() => {
-                if (pendingFile) startUpload(pendingFile, viewState.isReplacement);
+                if (pendingFile) {
+                  startUpload(
+                    pendingFile,
+                    viewState.isReplacement,
+                  );
+                }
               }}
               onSelectAnother={() => {
                 setPendingFile(null);
-                if (viewState.isReplacement && plan.importedFile) {
+
+                if (
+                  viewState.isReplacement &&
+                  plan.importedFile
+                ) {
                   setViewState({
                     kind: 'replacement-upload-failed',
                     previousFile: plan.importedFile,
                   });
                 } else {
-                  setViewState({ kind: 'idle' });
+                  setViewState({
+                    kind: 'idle',
+                  });
                 }
               }}
             />
           ) : null}
 
-          {viewState.kind === 'processing' ? <ProcessingState /> : null}
+          {viewState.kind === 'processing' ? (
+            <ProcessingState />
+          ) : null}
 
           {viewState.kind === 'structural-error' ? (
             <>
               <StructuralErrorState
                 errorType={viewState.errorType}
-                onRetry={() => setViewState({ kind: 'idle' })}
+                onRetry={() =>
+                  setViewState({
+                    kind: 'idle',
+                  })
+                }
               />
+
               {plan.importedFile ? (
                 <CurrentFileSummary
                   importedFile={plan.importedFile}
                   downstreamRisk="none"
-                  onReplace={() => setViewState({ kind: 'idle' })}
+                  onReplace={() =>
+                    setViewState({
+                      kind: 'idle',
+                    })
+                  }
                 />
               ) : null}
             </>
@@ -300,22 +422,31 @@ export function PlanIntakePage() {
                   otherReviewCount: 2,
                 }
               }
-              onContinueToReview={goToReviewHandoff}
+              onContinueToReview={
+                goToReviewHandoff
+              }
             />
           ) : null}
 
           {viewState.kind === 'import-clean' ? (
-            <ImportCleanState importedFile={mockImported} onContinue={goToReviewHandoff} />
+            <ImportCleanState
+              importedFile={mockImported}
+              onContinue={goToReviewHandoff}
+            />
           ) : null}
 
-          {viewState.kind === 'has-file' && plan.importedFile ? (
+          {viewState.kind === 'has-file' &&
+          plan.importedFile ? (
             <CurrentFileSummary
               importedFile={plan.importedFile}
-              downstreamRisk={viewState.downstreamRisk}
+              downstreamRisk={
+                viewState.downstreamRisk
+              }
               onReplace={() =>
                 setViewState({
                   kind: 'replace-confirm',
-                  downstreamRisk: viewState.downstreamRisk,
+                  downstreamRisk:
+                    viewState.downstreamRisk,
                 })
               }
             />
@@ -326,16 +457,22 @@ export function PlanIntakePage() {
               {plan.importedFile ? (
                 <CurrentFileSummary
                   importedFile={plan.importedFile}
-                  downstreamRisk={viewState.downstreamRisk}
+                  downstreamRisk={
+                    viewState.downstreamRisk
+                  }
                   onReplace={() => undefined}
                 />
               ) : null}
+
               <ReplaceDatasetConfirm
-                downstreamRisk={viewState.downstreamRisk}
+                downstreamRisk={
+                  viewState.downstreamRisk
+                }
                 onCancel={() =>
                   setViewState({
                     kind: 'has-file',
-                    downstreamRisk: viewState.downstreamRisk,
+                    downstreamRisk:
+                      viewState.downstreamRisk,
                   })
                 }
                 onConfirm={() => {
@@ -346,21 +483,33 @@ export function PlanIntakePage() {
                    */
                   setIsReplacing(true);
                   setPendingFile(null);
-                  setViewState({ kind: 'idle' });
+                  setViewState({
+                    kind: 'idle',
+                  });
                 }}
               />
             </>
           ) : null}
 
-          {viewState.kind === 'replacement-upload-failed' ? (
+          {viewState.kind ===
+          'replacement-upload-failed' ? (
             <ReplacementUploadFailedState
-              previousFile={viewState.previousFile}
+              previousFile={
+                viewState.previousFile
+              }
               onRetry={() => {
-                if (pendingFile) startUpload(pendingFile, true);
+                if (pendingFile) {
+                  startUpload(
+                    pendingFile,
+                    true,
+                  );
+                }
               }}
               onSelectAnother={() => {
                 setIsReplacing(true);
-                setViewState({ kind: 'idle' });
+                setViewState({
+                  kind: 'idle',
+                });
               }}
             />
           ) : null}

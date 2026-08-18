@@ -8,7 +8,7 @@ import { Button, InlineMessage } from '@/shared/ui';
 import '@/features/planning/styles/planning.css';
 
 /**
- * Planning workspace — fourth plan-scoped workflow stage at `/plans/:planId/planning`.
+ * Plan-scoped planning workspace at `/plans/:planId/planning`.
  */
 export function PlanningPage() {
   const { planId } = useParams<{ planId: string }>();
@@ -26,6 +26,7 @@ export function PlanningPage() {
     return (
       <div className="plan-workspace-page flex flex-col items-start gap-3 p-6">
         <InlineMessage tone="error">بارگذاری برنامه ناموفق بود.</InlineMessage>
+
         <Button variant="secondary" size="sm" onClick={() => void reload()}>
           تلاش مجدد
         </Button>
@@ -41,14 +42,18 @@ export function PlanningPage() {
     );
   }
 
-  const fixture = getPlanningFixture(plan.id, { planName: plan.name });
+  const fixture = getPlanningFixture(plan.id, {
+    planName: plan.name,
+  });
 
   return (
     <div className="plan-workspace-page">
-      <PlanContextHeader
-        plan={plan}
+      <PlanContextHeader plan={plan} />
+
+      <PlanningWorkspace
+        key={plan.id}
+        initialFixture={fixture}
       />
-      <PlanningWorkspace key={plan.id} initialFixture={fixture} />
     </div>
   );
 }
