@@ -1,16 +1,14 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
 import { ExecutionWorkspace } from '@/features/execution/components/ExecutionWorkspace';
 import { useExecutionData } from '@/features/execution/hooks/useExecutionData';
 import { PlanContextHeader } from '@/features/plans/components/PlanContextHeader';
 import { usePlan } from '@/features/plans/hooks/usePlansData';
-import { planStagePath } from '@/features/plans/plan-stage-path';
 import { Button, InlineMessage } from '@/shared/ui';
 import '@/features/execution/styles/execution.css';
 
 export function ExecutionPage() {
   const { planId } = useParams<{ planId: string }>();
-  const navigate = useNavigate();
   const { plan, status: planStatus, reload: reloadPlan } = usePlan(planId);
   const execution = useExecutionData(planId);
 
@@ -43,11 +41,7 @@ export function ExecutionPage() {
 
   return (
     <div className="plan-workspace-page">
-      <PlanContextHeader
-        plan={plan}
-        activeStage="execution"
-        onStageChange={(stage) => navigate(planStagePath(plan.id, stage))}
-      />
+      <PlanContextHeader plan={plan} />
       <ExecutionWorkspace
         snapshot={execution.snapshot}
         status={execution.status}
