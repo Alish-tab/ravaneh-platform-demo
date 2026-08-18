@@ -86,16 +86,16 @@ export function stopMarkerStyle(
       };
     case 'warning':
       return {
-        fill: '#c99035',
-        stroke: '#0c1520',
+        fill: '#c99035', // --warning
+        stroke: '#0f1318', // --bg-base
         radius: 5,
         opacity: 1,
         shape: 'triangle',
       };
     case 'error':
       return {
-        fill: '#c44444',
-        stroke: '#0c1520',
+        fill: '#c44444', // --error
+        stroke: '#0f1318', // --bg-base
         radius: 5,
         opacity: 1,
         shape: 'circle',
@@ -103,16 +103,16 @@ export function stopMarkerStyle(
       };
     case 'unassigned':
       return {
-        fill: '#22303f',
-        stroke: '#4a5e78',
+        fill: '#22303f', // --bg-surface
+        stroke: '#4a5e78', // --text-muted
         radius: 5,
         opacity: 1,
         shape: 'dashed-circle',
       };
     case 'completed':
       return {
-        fill: '#2b9d6f',
-        stroke: '#2b9d6f',
+        fill: '#2b9d6f', // --success
+        stroke: '#2b9d6f', // --success
         radius: 4,
         opacity: 0.7,
         shape: 'circle',
@@ -139,4 +139,4 @@ export const ROUTE_LINE_STYLE = {
   polygonAmbient: { fillOpacity: 0.05, strokeOpacity: 0.12 },
 } as const;
 
-export const MAP_BASE_FILL = '#0c1520';
+export const MAP_BASE_FILL = '#0f1318'; // --bg-base

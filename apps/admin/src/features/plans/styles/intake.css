@@ -2,7 +2,7 @@
 .file-drop {
   border: 1px dashed var(--border-default);
   border-radius: var(--r-md);
-  padding: 36px 24px;
+  padding: 20px;
   text-align: center;
   background: var(--bg-elevated);
   cursor: pointer;
