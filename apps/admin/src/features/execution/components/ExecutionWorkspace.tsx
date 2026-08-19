@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { ExecutionMap } from '@/features/execution/components/ExecutionMap';
 import { OperationsPanel } from '@/features/execution/components/OperationsPanel';
@@ -25,6 +25,8 @@ type ExecutionWorkspaceProps = {
   onRetry: () => void;
   searchOrder: (query: string) => Promise<ExecutionOrder | null>;
   saveFollowupNote: (orderId: string, note: string) => Promise<ExecutionFollowupNote>;
+  /** Deep-link from A05 global search: External Order ID to open on mount. */
+  initialOrderId?: string;
 };
 
 function RecoveredBanner({ text }: { text: string }) {
@@ -60,11 +62,27 @@ export function ExecutionWorkspace({
   onRetry,
   searchOrder,
   saveFollowupNote,
+  initialOrderId,
 }: ExecutionWorkspaceProps) {
   const [panelOpen, setPanelOpen] = useState(true);
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [view, setView] = useState<PanelView>({ kind: 'areas' });
   const [revisionBannerOpen, setRevisionBannerOpen] = useState(true);
+
+  // Deep-link: if opened from A05 search with ?orderId, search and open the order once ready.
+  const deepLinkRef = useRef(initialOrderId);
+  useEffect(() => {
+    if (!deepLinkRef.current || status !== 'ready' || !snapshot) return;
+    const id = deepLinkRef.current;
+    deepLinkRef.current = undefined; // consume once
+    void searchOrder(id).then((order) => {
+      if (order) {
+        const loc = snapshot.locations.find((l) => l.id === order.locationId);
+        if (loc) setSelectedAreaId(loc.areaId);
+        setView({ kind: 'order-detail', orderId: order.id, backLocationId: order.locationId });
+      }
+    });
+  }, [status, snapshot, searchOrder]);
 
   const counts = useMemo(() => (snapshot ? deriveSummary(snapshot) : null), [snapshot]);
   const blocking = status === 'loading' || status === 'error' || (status === 'ready' && !snapshot);
