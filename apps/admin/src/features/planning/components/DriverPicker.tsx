@@ -12,12 +12,14 @@ type DriverPickerProps = {
   routes: PlanningArea[];
   onSelectDriver: (driver: PlanningDriver) => void;
   onBack: () => void;
+  /** Driver IDs that should not be offered for new assignment (e.g. operationally inactive). */
+  unavailableDriverIds?: ReadonlySet<string>;
 };
 
 /**
  * Designer Mode E1 — search and pick a driver for the selected area.
  */
-export function DriverPicker({ route, routes, onSelectDriver, onBack }: DriverPickerProps) {
+export function DriverPicker({ route, routes, onSelectDriver, onBack, unavailableDriverIds }: DriverPickerProps) {
   const [query, setQuery] = useState('');
   const driverAreaMap = useMemo(
     () => buildDriverAreaMap(routes, route.areaId),
@@ -25,7 +27,9 @@ export function DriverPicker({ route, routes, onSelectDriver, onBack }: DriverPi
   );
 
   const filtered = PLANNING_DRIVERS.filter(
-    (driver) => query === '' || driver.driverName.includes(query),
+    (driver) =>
+      (query === '' || driver.driverName.includes(query)) &&
+      !unavailableDriverIds?.has(driver.driverId),
   );
 
   return (
