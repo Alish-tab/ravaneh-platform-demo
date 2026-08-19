@@ -14,6 +14,8 @@ type UsePlanningGenerationOptions = {
   /** When true, generation ends in failed (tests / demo). */
   simulateFail?: boolean;
   timing?: PlanningGenerationTiming;
+  /** Feature-local port/fixture generate. Not a public optimizer call. */
+  runGenerate?: (targetCount: number) => Promise<'generated' | 'failed'>;
 };
 
 /**
@@ -25,13 +27,27 @@ export function usePlanningGeneration({
   initialTargetAreaCount = 3,
   simulateFail = false,
   timing = DEFAULT_GENERATION_TIMING,
+  runGenerate,
 }: UsePlanningGenerationOptions = {}) {
   const [phase, setPhase] = useState<PlanningGenerationPhase>(initialPhase);
   const [targetAreaCount, setTargetAreaCount] = useState(initialTargetAreaCount);
   const inFlightRef = useRef(false);
   const timersRef = useRef<number[]>([]);
   const simulateFailRef = useRef(simulateFail);
-  simulateFailRef.current = simulateFail;
+  const runGenerateRef = useRef(runGenerate);
+  const targetRef = useRef(targetAreaCount);
+
+  useEffect(() => {
+    simulateFailRef.current = simulateFail;
+  }, [simulateFail]);
+
+  useEffect(() => {
+    runGenerateRef.current = runGenerate;
+  }, [runGenerate]);
+
+  useEffect(() => {
+    targetRef.current = targetAreaCount;
+  }, [targetAreaCount]);
 
   const clearTimers = useCallback(() => {
     for (const id of timersRef.current) {
@@ -55,8 +71,17 @@ export function usePlanningGeneration({
     }, timing.submittingMs);
 
     const toComplete = window.setTimeout(() => {
-      inFlightRef.current = false;
-      setPhase(simulateFailRef.current ? 'failed' : 'generated');
+      const finish = async () => {
+        if (runGenerateRef.current) {
+          const result = await runGenerateRef.current(targetRef.current);
+          inFlightRef.current = false;
+          setPhase(result);
+          return;
+        }
+        inFlightRef.current = false;
+        setPhase(simulateFailRef.current ? 'failed' : 'generated');
+      };
+      void finish();
     }, timing.completeMs);
 
     timersRef.current = [toGenerating, toComplete];
@@ -64,6 +89,7 @@ export function usePlanningGeneration({
 
   return {
     phase,
+    setPhase,
     targetAreaCount,
     setTargetAreaCount,
     startGeneration,

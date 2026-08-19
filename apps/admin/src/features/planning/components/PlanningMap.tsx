@@ -91,8 +91,8 @@ export function PlanningMap({
 
   const preGenerationStops = useMemo(() => {
     const stops: PlanningStop[] = [];
-    for (const route of fixture.routes) {
-      stops.push(...route.stops);
+    for (const area of fixture.areas) {
+      stops.push(...area.stops);
     }
     stops.push(...fixture.unassignedStops);
     return stops;
@@ -122,7 +122,11 @@ export function PlanningMap({
       data-show-route-areas={showRouteAreas ? 'true' : 'false'}
     >
       <BaseMap
-        center={[fixture.depot.lat, fixture.depot.lng]}
+        center={
+          fixture.depot
+            ? [fixture.depot.lat, fixture.depot.lng]
+            : allStopPositions(fixture)[0] ?? [35.7, 51.4]
+        }
         zoom={12}
         className="h-full w-full"
         zoomControl={false}
@@ -148,7 +152,7 @@ export function PlanningMap({
         {renderRouteAreas ? (
           <RoutePolygons
             areas={areas}
-            activeRouteId={activeRouteId}
+            activeAreaId={activeRouteId}
             onSelectRoute={handleSelectRoute}
           />
         ) : null}
@@ -160,14 +164,14 @@ export function PlanningMap({
           : null}
 
         {areasGenerated
-          ? fixture.routes.map((route) => {
-              const routeIsSelected = activeRouteId === route.routeId;
+          ? fixture.areas.map((area) => {
+              const routeIsSelected = activeRouteId === area.areaId;
               const isAmbiguous = activeRouteId !== null && !routeIsSelected;
-              return route.stops.map((stop) => (
+              return area.stops.map((stop) => (
                 <StopMarker
                   key={stop.stopId}
                   stop={stop}
-                  routeColor={route.color}
+                  routeColor={area.color}
                   routeIsSelected={routeIsSelected}
                   isStopSelected={selectedStopId === stop.stopId}
                   isAmbiguous={isAmbiguous}
@@ -188,7 +192,9 @@ export function PlanningMap({
             ))
           : null}
 
-        <DepotMarker lat={fixture.depot.lat} lng={fixture.depot.lng} name={fixture.depot.name} />
+        {fixture.depot ? (
+          <DepotMarker lat={fixture.depot.lat} lng={fixture.depot.lng} name={fixture.depot.name} />
+        ) : null}
 
         {correctionActive && correctionStop ? (
           <LocationCorrectionLayer

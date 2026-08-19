@@ -25,12 +25,13 @@ import type {
   PlanningAreaFilter,
   PlanningDriver,
   PlanningPlanFixture,
-  PlanningRoute,
+  PlanningArea,
   PlanningStop,
   PlanningTransferFlow,
 } from '@/features/planning/fixture/types';
 import type { PlanningLatLng } from '@/features/planning/fixture/update-stop-location';
 import { orderedRouteStops, routeOrderCount } from '@/features/planning/map/route-waypoints';
+import { findRouteForArea } from '@/features/planning/planning-model';
 import {
   formatDurationMin,
   PLANNING_ROUTE_STATE_COLOR,
@@ -139,11 +140,11 @@ export function PlanningSidePanel({
 }: PlanningSidePanelProps) {
   if (correctionStopId) {
     const found = findStopInPlan(fixture, correctionStopId);
-    if (found?.route) {
+    if (found?.area) {
       return (
         <LocationCorrectionPanel
           stop={found.stop}
-          route={found.route}
+          route={found.area}
           proposedLocation={proposedLocation}
           isSaving={isPending}
           onSave={onSaveLocationCorrection}
@@ -156,7 +157,7 @@ export function PlanningSidePanel({
 
   if (transferFlow) {
     const found = findStopInPlan(fixture, transferFlow.stopId);
-    if (found?.route) {
+    if (found?.area) {
       if (transferFlow.step === 'scope' && transferFlow.orderId) {
         return (
           <TransferScopePicker
@@ -177,8 +178,8 @@ export function PlanningSidePanel({
         return (
           <AreaTransferPicker
             stop={found.stop}
-            routes={fixture.routes}
-            currentRouteId={found.route.routeId}
+            routes={fixture.areas}
+            currentRouteId={found.area.areaId}
             scopeLabel={scopeLabel}
             allowUnassigned={transferFlow.scope === 'stop'}
             isTransferring={isPending}
@@ -198,7 +199,7 @@ export function PlanningSidePanel({
       return (
         <UnassignedAreaPicker
           stop={stop}
-          routes={fixture.routes}
+          routes={fixture.areas}
           isAssigning={isPending}
           onConfirm={onConfirmAreaAssign}
           onBack={onCloseAreaPicker}
@@ -208,7 +209,7 @@ export function PlanningSidePanel({
   }
 
   if (removeDriverRouteId) {
-    const route = fixture.routes.find((item) => item.routeId === removeDriverRouteId);
+    const route = fixture.areas.find((item) => item.areaId === removeDriverRouteId);
     if (route?.driverName) {
       return (
         <RemoveDriverConfirm
@@ -223,7 +224,7 @@ export function PlanningSidePanel({
   }
 
   if (driverPickerRouteId && pendingDriver) {
-    const route = fixture.routes.find((item) => item.routeId === driverPickerRouteId);
+    const route = fixture.areas.find((item) => item.areaId === driverPickerRouteId);
     if (route) {
       return (
         <DriverConfirm
@@ -240,12 +241,12 @@ export function PlanningSidePanel({
   }
 
   if (driverPickerRouteId) {
-    const route = fixture.routes.find((item) => item.routeId === driverPickerRouteId);
+    const route = fixture.areas.find((item) => item.areaId === driverPickerRouteId);
     if (route) {
       return (
         <DriverPicker
           route={route}
-          routes={fixture.routes}
+          routes={fixture.areas}
           onSelectDriver={onSelectDriverCandidate}
           onBack={onCloseDriverPicker}
         />
@@ -256,12 +257,12 @@ export function PlanningSidePanel({
   if (selectedOrderId && selectedStopId) {
     const found = findStopInPlan(fixture, selectedStopId);
     const task = found?.stop.tasks.find((item) => item.orderId === selectedOrderId);
-    if (found?.route && task) {
+    if (found?.area && task) {
       return (
         <OrderDetailPanel
           task={task}
           stop={found.stop}
-          route={found.route}
+          route={found.area}
           onStartAreaTransfer={() => onOpenTransferFromOrder(found.stop.stopId, task.orderId)}
           onStartLocationCorrection={() => onOpenLocationCorrection(found.stop.stopId)}
           onBack={onBackFromOrder}
@@ -273,11 +274,11 @@ export function PlanningSidePanel({
 
   if (selectedStopId) {
     const found = findStopInPlan(fixture, selectedStopId);
-    if (found?.route) {
+    if (found?.area) {
       return (
         <StopDetailPanel
           stop={found.stop}
-          route={found.route}
+          route={found.area}
           selectedOrderId={selectedOrderId}
           onSelectOrder={onSelectOrder}
           onStartAreaTransfer={() => onOpenTransferFromStop(found.stop.stopId)}
@@ -290,18 +291,19 @@ export function PlanningSidePanel({
   }
 
   if (selectedRouteId) {
-    const route = fixture.routes.find((item) => item.routeId === selectedRouteId);
+    const route = fixture.areas.find((item) => item.areaId === selectedRouteId);
     if (route) {
       return (
         <RouteDetailPanel
+          fixture={fixture}
           route={route}
           selectedStopId={selectedStopId}
           isPending={isPending}
-          justAssigned={justAssignedRouteId === route.routeId}
+          justAssigned={justAssignedRouteId === route.areaId}
           onSelectStop={onSelectStop}
-          onStartDriverAssignment={() => onOpenDriverPicker(route.routeId)}
-          onStartRemoveDriver={() => onOpenRemoveDriver(route.routeId)}
-          onToggleLock={() => onToggleDriverLock(route.routeId)}
+          onStartDriverAssignment={() => onOpenDriverPicker(route.areaId)}
+          onStartRemoveDriver={() => onOpenRemoveDriver(route.areaId)}
+          onToggleLock={() => onToggleDriverLock(route.areaId)}
           onBack={onBackFromRoute}
           onClose={onCollapse}
         />
@@ -353,12 +355,12 @@ function RoutesListPanel({
   onExcludeUnassignedStop,
   onClose,
 }: RoutesListPanelProps) {
-  const assignedCount = fixture.routes.filter((route) => !!route.driverName).length;
-  const unassignedDriverCount = fixture.routes.length - assignedCount;
+  const assignedCount = fixture.areas.filter((route) => !!route.driverName).length;
+  const unassignedDriverCount = fixture.areas.length - assignedCount;
   const unassignedOrdersTotal = countUnassignedOrders(fixture);
   const remainingUnassigned = countRemainingUnassignedOrders(fixture, excludedOrderIds);
 
-  const displayedRoutes = fixture.routes.filter((route) => {
+  const displayedRoutes = fixture.areas.filter((route) => {
     if (areaFilter === 'assigned') return !!route.driverName;
     if (areaFilter === 'unassigned') return !route.driverName;
     return true;
@@ -369,7 +371,7 @@ function RoutesListPanel({
       <div className="planning-inspector-header">
         <Icon d={ICONS.layers} size={13} />
         <span className="planning-inspector-title">محدوده‌ها</span>
-        <span className="planning-inspector-count">{toPersianDigits(fixture.routes.length)}</span>
+        <span className="planning-inspector-count">{toPersianDigits(fixture.areas.length)}</span>
         <button type="button" className="planning-icon-btn" title="بستن پانل" onClick={onClose}>
           <Icon d={ICONS.panel_end} size={14} />
         </button>
@@ -379,7 +381,7 @@ function RoutesListPanel({
         {[
           { value: toPersianDigits(countPlanStops(fixture) - fixture.unassignedStops.length), label: 'نقطه' },
           { value: toPersianDigits(countPlanOrders(fixture) - unassignedOrdersTotal), label: 'سفارش' },
-          { value: toPersianDigits(fixture.routes.length), label: 'محدوده' },
+          { value: toPersianDigits(fixture.areas.length), label: 'محدوده' },
           ...(remainingUnassigned > 0
             ? [{ value: toPersianDigits(remainingUnassigned), label: 'بدون محدوده', warn: true }]
             : []),
@@ -403,7 +405,7 @@ function RoutesListPanel({
       <div className="planning-filter-tabs" role="tablist" aria-label="فیلتر محدوده‌ها">
         {(
           [
-            ['all', 'همه', fixture.routes.length],
+            ['all', 'همه', fixture.areas.length],
             ['assigned', 'تخصیص‌شده', assignedCount],
             ['unassigned', 'بدون راننده', unassignedDriverCount],
           ] as const
@@ -425,18 +427,18 @@ function RoutesListPanel({
       <div className="planning-inspector-scroll">
         {displayedRoutes.map((route) => {
           const taskCount = routeOrderCount(route);
-          const selected = selectedRouteId === route.routeId;
+          const selected = selectedRouteId === route.areaId;
           const stateLabel = PLANNING_ROUTE_STATE_LABEL[route.planState];
           const stateColor = PLANNING_ROUTE_STATE_COLOR[route.planState];
           return (
             <button
-              key={route.routeId}
+              key={route.areaId}
               type="button"
               className="planning-route-row"
               aria-selected={selected}
-              data-testid={`route-row-${route.routeId}`}
+              data-testid={`route-row-${route.areaId}`}
               data-route-state={route.planState}
-              onClick={() => onSelectRoute(route.routeId)}
+              onClick={() => onSelectRoute(route.areaId)}
             >
               <div className="mb-1 flex items-center gap-1.5">
                 <span className="planning-route-color" style={{ background: route.color }} />
@@ -645,6 +647,7 @@ function UnassignedQueue({
 }
 
 function RouteDetailPanel({
+  fixture,
   route,
   selectedStopId,
   isPending,
@@ -656,7 +659,8 @@ function RouteDetailPanel({
   onBack,
   onClose,
 }: {
-  route: PlanningRoute;
+  fixture: PlanningPlanFixture;
+  route: PlanningArea;
   selectedStopId: string | null;
   isPending: boolean;
   justAssigned: boolean;
@@ -668,7 +672,8 @@ function RouteDetailPanel({
   onClose: () => void;
 }) {
   const totalTasks = routeOrderCount(route);
-  const sortedStops = useMemo(() => orderedRouteStops(route), [route]);
+  const sortedStops = useMemo(() => orderedRouteStops(route, fixture), [fixture, route]);
+  const planningRoute = findRouteForArea(fixture, route.areaId);
   const stopListRef = useRef<HTMLDivElement>(null);
   const stateLabel = PLANNING_ROUTE_STATE_LABEL[route.planState];
   const stateColor = PLANNING_ROUTE_STATE_COLOR[route.planState];
@@ -717,13 +722,13 @@ function RouteDetailPanel({
         </div>
         <div className="planning-inspector-stat">
           <div className="planning-inspector-stat-value !text-base">
-            {toPersianDigits(route.distanceKm)}
+            {toPersianDigits(planningRoute?.distanceKm ?? 0)}
           </div>
           <div className="planning-inspector-stat-label">کیلومتر</div>
         </div>
         <div className="planning-inspector-stat">
           <div className="planning-inspector-stat-value !text-[12px] !leading-tight">
-            {formatDurationMin(route.durationMin)}
+            {formatDurationMin(planningRoute?.durationMin ?? 0)}
           </div>
           <div className="planning-inspector-stat-label">زمان</div>
         </div>
@@ -902,7 +907,7 @@ function OrderDetailPanel({
 }: {
   task: PlanningStop['tasks'][number];
   stop: PlanningStop;
-  route: PlanningRoute;
+  route: PlanningArea;
   onStartAreaTransfer: () => void;
   onStartLocationCorrection: () => void;
   onBack: () => void;
@@ -928,6 +933,12 @@ function OrderDetailPanel({
         <div className="mb-3">
           <div className="mb-1 text-[10px] text-[var(--text-muted)]">گیرنده</div>
           <div className="text-[12.5px] text-[var(--text-primary)]">{task.recipientName}</div>
+        </div>
+        <div className="mb-3">
+          <div className="mb-1 text-[10px] text-[var(--text-muted)]">تلفن</div>
+          <LtrData className="text-[12.5px] text-[var(--text-primary)]" data-testid="order-phone">
+            {task.phone}
+          </LtrData>
         </div>
         <div className="mb-3">
           <div className="mb-1 text-[10px] text-[var(--text-muted)]">آدرس</div>
@@ -990,7 +1001,7 @@ function StopDetailPanel({
   onClose,
 }: {
   stop: PlanningStop;
-  route: PlanningRoute;
+  route: PlanningArea;
   selectedOrderId: string | null;
   onSelectOrder: (orderId: string) => void;
   onStartAreaTransfer: () => void;

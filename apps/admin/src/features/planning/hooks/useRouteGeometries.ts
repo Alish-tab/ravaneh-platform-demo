@@ -1,71 +1,47 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 
 import type { PlanningPlanFixture } from '@/features/planning/fixture/types';
-import {
-  resolveRouteGeometry,
-  type LatLngTuple,
-  type RouteGeometryResult,
-} from '@/features/planning/map/osrm';
+import { straightLineGeometry, type LatLngTuple, type RouteGeometryResult } from '@/features/planning/map/osrm';
 import { geometryCacheKey, routeWaypoints } from '@/features/planning/map/route-waypoints';
 
 export type RouteGeometryEntry = RouteGeometryResult & {
+  areaId: string;
   routeId: string;
 };
 
-/** Session cache — avoid repeat public OSRM calls for the same waypoints. */
-const sessionGeometryCache = new Map<string, RouteGeometryResult>();
-
 /**
- * Resolve road-following (or fallback) geometry once per route for the current fixture.
- * Does not refetch on selection changes.
+ * Fixture-local route visualization from ordered Stop points.
+ * Does not call OSRM / Neshan — routing authority is Backend/port.
  */
 export function useRouteGeometries(fixture: PlanningPlanFixture): Record<string, RouteGeometryEntry> {
-  const [geometries, setGeometries] = useState<Record<string, RouteGeometryEntry>>({});
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const load = async () => {
-      const next: Record<string, RouteGeometryEntry> = {};
-
-      await Promise.all(
-        fixture.routes.map(async (route) => {
-          const waypoints = routeWaypoints(fixture.depot, route);
-          const cacheKey = geometryCacheKey(route.routeId, waypoints);
-
-          let result = sessionGeometryCache.get(cacheKey);
-          if (!result) {
-            result = await resolveRouteGeometry(waypoints);
-            sessionGeometryCache.set(cacheKey, result);
-          }
-
-          next[route.routeId] = { routeId: route.routeId, ...result };
-        }),
-      );
-
-      if (!cancelled) {
-        setGeometries(next);
-      }
-    };
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
+  return useMemo(() => {
+    const next: Record<string, RouteGeometryEntry> = {};
+    for (const area of fixture.areas) {
+      const route = fixture.routes.find((item) => item.areaId === area.areaId);
+      const waypoints = routeWaypoints(fixture.depot, area, fixture);
+      const positions = straightLineGeometry(waypoints);
+      const routeId = route?.routeId ?? `RT-${area.areaId}`;
+      next[area.areaId] = {
+        areaId: area.areaId,
+        routeId,
+        positions,
+        source: 'straight',
+      };
+      void geometryCacheKey(area.areaId, waypoints);
+    }
+    return next;
   }, [fixture]);
-
-  return geometries;
 }
 
 export function geometryPositions(
   geometries: Record<string, RouteGeometryEntry>,
-  routeId: string,
+  areaId: string,
 ): LatLngTuple[] | null {
-  const entry = geometries[routeId];
+  const entry = geometries[areaId];
   return entry && entry.positions.length >= 2 ? entry.positions : null;
 }
 
-/** Clear session cache — tests only. */
+/** @deprecated Session OSRM cache removed from Product path. */
 export function __clearRouteGeometrySessionCacheForTests(): void {
-  sessionGeometryCache.clear();
+  /* no-op — Product geometries are derived locally */
 }

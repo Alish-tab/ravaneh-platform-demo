@@ -3,6 +3,11 @@ import type {
   PlanningPlanFixture,
   PlanningStop,
 } from '@/features/planning/fixture/types';
+import {
+  markRoutesDirty,
+  syncAreaMembership,
+  syncRouteOrderFromArea,
+} from '@/features/planning/planning-model';
 
 function sortBySeq(stops: PlanningStop[]): PlanningStop[] {
   return [...stops].sort((a, b) => a.seq - b.seq);
@@ -17,89 +22,97 @@ function nextSeq(stops: PlanningStop[]): number {
   return Math.max(...stops.map((item) => item.seq)) + 1;
 }
 
-function sameDeliveryLocation(a: { lat: number; lng: number }, b: { lat: number; lng: number }): boolean {
-  return Math.abs(a.lat - b.lat) < 1e-6 && Math.abs(a.lng - b.lng) < 1e-6;
-}
-
-function findRoutedStop(
+function findAssignedStop(
   fixture: PlanningPlanFixture,
   stopId: string,
-): { routeIndex: number; stopIndex: number; stop: PlanningStop } | null {
-  for (let routeIndex = 0; routeIndex < fixture.routes.length; routeIndex += 1) {
-    const route = fixture.routes[routeIndex]!;
-    const stopIndex = route.stops.findIndex((item) => item.stopId === stopId);
+): { areaIndex: number; stopIndex: number; stop: PlanningStop } | null {
+  for (let areaIndex = 0; areaIndex < fixture.areas.length; areaIndex += 1) {
+    const area = fixture.areas[areaIndex]!;
+    const stopIndex = area.stops.findIndex((item) => item.stopId === stopId);
     if (stopIndex >= 0) {
-      return { routeIndex, stopIndex, stop: route.stops[stopIndex]! };
+      return { areaIndex, stopIndex, stop: area.stops[stopIndex]! };
     }
   }
   return null;
 }
 
+function withSyncedRoutes(fixture: PlanningPlanFixture): PlanningPlanFixture {
+  return {
+    ...fixture,
+    areas: fixture.areas.map(syncAreaMembership),
+    routes: fixture.routes.map((route) => {
+      const area = fixture.areas.find((item) => item.areaId === route.areaId);
+      return area ? syncRouteOrderFromArea(area, route) : route;
+    }),
+  };
+}
+
 /**
- * Move a routed stop to another route (frontend-only).
- * Appends at end of destination — temporary until optimization exists.
- * Reindexes the source route sequence after removal.
+ * Move a Physical Stop to another Area (membership only).
+ * Coordinates are unchanged. Affected routes become dirty via returned impact.
  */
 export function moveStopToRoute(
   fixture: PlanningPlanFixture,
   stopId: string,
-  toRouteId: string,
+  toAreaId: string,
 ): PlanningPlanFixture | null {
-  const found = findRoutedStop(fixture, stopId);
+  const found = findAssignedStop(fixture, stopId);
   if (!found) return null;
 
-  const fromRoute = fixture.routes[found.routeIndex]!;
-  if (fromRoute.routeId === toRouteId) return null;
+  const fromArea = fixture.areas[found.areaIndex]!;
+  if (fromArea.areaId === toAreaId) return null;
 
-  const toRouteIndex = fixture.routes.findIndex((route) => route.routeId === toRouteId);
-  if (toRouteIndex < 0) return null;
+  const toAreaIndex = fixture.areas.findIndex((area) => area.areaId === toAreaId);
+  if (toAreaIndex < 0) return null;
 
-  const toRoute = fixture.routes[toRouteIndex]!;
-  const moved = { ...found.stop, seq: nextSeq(toRoute.stops) };
+  const toArea = fixture.areas[toAreaIndex]!;
+  const moved = { ...found.stop, seq: nextSeq(toArea.stops), lat: found.stop.lat, lng: found.stop.lng };
   const sourceRemaining = reindexStops(
-    fromRoute.stops.filter((item) => item.stopId !== stopId),
+    fromArea.stops.filter((item) => item.stopId !== stopId),
   );
 
-  const nextRoutes = fixture.routes.map((route, index) => {
-    if (index === found.routeIndex) {
-      return { ...route, stops: sourceRemaining };
+  const areas = fixture.areas.map((area, index) => {
+    if (index === found.areaIndex) {
+      return syncAreaMembership({ ...area, stops: sourceRemaining });
     }
-    if (index === toRouteIndex) {
-      return { ...route, stops: [...route.stops, moved] };
+    if (index === toAreaIndex) {
+      return syncAreaMembership({ ...area, stops: [...area.stops, moved] });
     }
-    return route;
+    return area;
   });
 
-  return { ...fixture, routes: nextRoutes };
+  const next = withSyncedRoutes({ ...fixture, areas });
+  return markRoutesDirty(next, [fromArea.areaId, toAreaId]);
 }
 
 /**
- * Remove a stop from its route into the unassigned queue (frontend-only).
- * Reindexes the source route sequence after removal.
+ * Remove a stop from its Area into the unassigned queue.
  */
 export function removeStopFromRoute(
   fixture: PlanningPlanFixture,
   stopId: string,
 ): PlanningPlanFixture | null {
-  const found = findRoutedStop(fixture, stopId);
+  const found = findAssignedStop(fixture, stopId);
   if (!found) return null;
 
   if (fixture.unassignedStops.some((item) => item.stopId === stopId)) return null;
 
+  const fromArea = fixture.areas[found.areaIndex]!;
   const sourceRemaining = reindexStops(
-    fixture.routes[found.routeIndex]!.stops.filter((item) => item.stopId !== stopId),
+    fromArea.stops.filter((item) => item.stopId !== stopId),
   );
 
-  const nextRoutes = fixture.routes.map((route, index) => {
-    if (index !== found.routeIndex) return route;
-    return { ...route, stops: sourceRemaining };
+  const areas = fixture.areas.map((area, index) => {
+    if (index !== found.areaIndex) return area;
+    return syncAreaMembership({ ...area, stops: sourceRemaining });
   });
 
-  return {
+  const next = withSyncedRoutes({
     ...fixture,
-    routes: nextRoutes,
+    areas,
     unassignedStops: [...fixture.unassignedStops, { ...found.stop, seq: 0 }],
-  };
+  });
+  return markRoutesDirty(next, [fromArea.areaId]);
 }
 
 export type MoveOrderResult = {
@@ -108,26 +121,25 @@ export type MoveOrderResult = {
 };
 
 /**
- * Move a single order/task from a multi-order (or single-order) stop to another route.
- * Merges into an existing destination stop at the same lat/lng when present;
- * otherwise appends a new stop at the end of the destination sequence.
+ * Move a single Order from a (possibly multi-order) Physical Stop to another Area.
+ * Does not move sibling Orders. Does not change coordinates.
+ * Does not merge by lat/lng — destination is a new Physical Stop unless the port says otherwise.
  */
 export function moveOrderToRoute(
   fixture: PlanningPlanFixture,
   orderId: string,
-  toRouteId: string,
+  toAreaId: string,
 ): MoveOrderResult | null {
-  let sourceRouteIndex = -1;
+  let sourceAreaIndex = -1;
   let sourceStopIndex = -1;
   let task: PlanningDeliveryTask | null = null;
 
-  for (let routeIndex = 0; routeIndex < fixture.routes.length; routeIndex += 1) {
-    const route = fixture.routes[routeIndex]!;
-    for (let stopIndex = 0; stopIndex < route.stops.length; stopIndex += 1) {
-      const stop = route.stops[stopIndex]!;
-      const foundTask = stop.tasks.find((item) => item.orderId === orderId);
+  for (let areaIndex = 0; areaIndex < fixture.areas.length; areaIndex += 1) {
+    const area = fixture.areas[areaIndex]!;
+    for (let stopIndex = 0; stopIndex < area.stops.length; stopIndex += 1) {
+      const foundTask = area.stops[stopIndex]!.tasks.find((item) => item.orderId === orderId);
       if (foundTask) {
-        sourceRouteIndex = routeIndex;
+        sourceAreaIndex = areaIndex;
         sourceStopIndex = stopIndex;
         task = foundTask;
         break;
@@ -136,64 +148,53 @@ export function moveOrderToRoute(
     if (task) break;
   }
 
-  if (!task || sourceRouteIndex < 0) return null;
+  if (!task || sourceAreaIndex < 0) return null;
 
-  const fromRoute = fixture.routes[sourceRouteIndex]!;
-  if (fromRoute.routeId === toRouteId) return null;
+  const fromArea = fixture.areas[sourceAreaIndex]!;
+  if (fromArea.areaId === toAreaId) return null;
 
-  const toRouteIndex = fixture.routes.findIndex((route) => route.routeId === toRouteId);
-  if (toRouteIndex < 0) return null;
+  const toAreaIndex = fixture.areas.findIndex((area) => area.areaId === toAreaId);
+  if (toAreaIndex < 0) return null;
 
-  const sourceStop = fromRoute.stops[sourceStopIndex]!;
+  const sourceStop = fromArea.stops[sourceStopIndex]!;
   const remainingTasks = sourceStop.tasks.filter((item) => item.orderId !== orderId);
-  const toRoute = fixture.routes[toRouteIndex]!;
+  const toArea = fixture.areas[toAreaIndex]!;
 
-  const mergeIndex = toRoute.stops.findIndex((stop) =>
-    sameDeliveryLocation(stop, sourceStop),
-  );
-
-  let destinationStopId: string;
-  let nextDestStops: PlanningStop[];
-
-  if (mergeIndex >= 0) {
-    const mergeTarget = toRoute.stops[mergeIndex]!;
-    destinationStopId = mergeTarget.stopId;
-    nextDestStops = toRoute.stops.map((stop, index) =>
-      index === mergeIndex
-        ? { ...stop, tasks: [...stop.tasks, task!] }
-        : stop,
-    );
-  } else {
-    destinationStopId = `${sourceStop.stopId}-${orderId}-xfer`;
-    const created: PlanningStop = {
-      stopId: destinationStopId,
-      seq: nextSeq(toRoute.stops),
-      lat: sourceStop.lat,
-      lng: sourceStop.lng,
-      tasks: [task],
-    };
-    nextDestStops = [...toRoute.stops, created];
-  }
+  const destinationStopId = `${sourceStop.stopId}-${orderId}-xfer`;
+  const created: PlanningStop = {
+    stopId: destinationStopId,
+    seq: nextSeq(toArea.stops),
+    lat: sourceStop.lat,
+    lng: sourceStop.lng,
+    rawLat: sourceStop.rawLat,
+    rawLng: sourceStop.rawLng,
+    tasks: [task],
+  };
 
   const nextSourceStops =
     remainingTasks.length === 0
-      ? reindexStops(fromRoute.stops.filter((_, index) => index !== sourceStopIndex))
-      : fromRoute.stops.map((stop, index) =>
-          index === sourceStopIndex ? { ...stop, tasks: remainingTasks } : stop,
+      ? reindexStops(fromArea.stops.filter((_, index) => index !== sourceStopIndex))
+      : fromArea.stops.map((item, index) =>
+          index === sourceStopIndex ? { ...item, tasks: remainingTasks } : item,
         );
 
-  const nextRoutes = fixture.routes.map((route, index) => {
-    if (index === sourceRouteIndex) {
-      return { ...route, stops: nextSourceStops };
+  const areas = fixture.areas.map((area, index) => {
+    if (index === sourceAreaIndex) {
+      return syncAreaMembership({ ...area, stops: nextSourceStops });
     }
-    if (index === toRouteIndex) {
-      return { ...route, stops: nextDestStops };
+    if (index === toAreaIndex) {
+      return syncAreaMembership({ ...area, stops: [...area.stops, created] });
     }
-    return route;
+    return area;
   });
 
+  const next = markRoutesDirty(withSyncedRoutes({ ...fixture, areas }), [
+    fromArea.areaId,
+    toAreaId,
+  ]);
+
   return {
-    fixture: { ...fixture, routes: nextRoutes },
+    fixture: next,
     destinationStopId,
   };
 }

@@ -8,17 +8,17 @@ import type { PlanningPlanFixture } from '@/features/planning/fixture/types';
 import type { LatLngTuple } from '@/features/planning/map/osrm';
 
 /**
- * Derive route-area polygons once per fixture (sync Turf work — no network).
+ * Derive area polygons once per fixture (sync Turf work — visualization only).
  */
 export function useRouteAreas(fixture: PlanningPlanFixture): RouteAreaEntry[] {
-  return useMemo(() => buildRouteAreas(fixture.routes), [fixture.routes]);
+  return useMemo(() => buildRouteAreas(fixture.areas), [fixture.areas]);
 }
 
 export function areaPositionsForRoute(
   areas: RouteAreaEntry[],
-  routeId: string | null,
+  areaId: string | null,
 ): LatLngTuple[] | null {
-  if (!routeId) return null;
-  const entry = areas.find((item) => item.routeId === routeId);
+  if (!areaId) return null;
+  const entry = areas.find((item) => item.areaId === areaId || item.routeId === areaId);
   return entry?.area?.positions ?? null;
 }

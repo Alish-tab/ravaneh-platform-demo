@@ -2,7 +2,7 @@ import { featureCollection, point } from '@turf/helpers';
 import { concave as turfConcave } from '@turf/concave';
 import { convex as turfConvex } from '@turf/convex';
 
-import type { PlanningRoute, PlanningStop } from '@/features/planning/fixture/types';
+import type { PlanningArea, PlanningStop } from '@/features/planning/fixture/types';
 import type { LatLngTuple } from '@/features/planning/map/osrm';
 
 export type RouteAreaResult = {
@@ -11,9 +11,8 @@ export type RouteAreaResult = {
 };
 
 /**
- * Derive a geographic delivery-area polygon from route stop coordinates.
- * Matches A03: concave(maxEdge 0.08) → convex fallback → null.
- * Depot is NOT included (designer uses stops only).
+ * Derive a geographic delivery-area polygon from explicit member Stop coordinates.
+ * Visualization only — membership is never inferred from this polygon.
  */
 export function deriveRouteArea(
   stops: Array<Pick<PlanningStop, 'lat' | 'lng'>>,
@@ -53,18 +52,21 @@ export function deriveRouteArea(
 }
 
 export type RouteAreaEntry = {
+  areaId: string;
+  /** @deprecated Use areaId. Kept so map stubs can still key polygons. */
   routeId: string;
   color: string;
-  planState: PlanningRoute['planState'];
+  planState: PlanningArea['planState'];
   area: RouteAreaResult | null;
 };
 
-/** Build area entries for every fixture route (null area when degenerate). */
-export function buildRouteAreas(routes: PlanningRoute[]): RouteAreaEntry[] {
-  return routes.map((route) => ({
-    routeId: route.routeId,
-    color: route.color,
-    planState: route.planState,
-    area: deriveRouteArea(route.stops),
+/** Build visualization polygons from explicit Area membership (not Turf containment). */
+export function buildRouteAreas(areas: PlanningArea[]): RouteAreaEntry[] {
+  return areas.map((item) => ({
+    areaId: item.areaId,
+    routeId: item.areaId,
+    color: item.color,
+    planState: item.planState,
+    area: deriveRouteArea(item.stops),
   }));
 }

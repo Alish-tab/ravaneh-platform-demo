@@ -91,7 +91,7 @@ export function usePlanningSelection(fixture: PlanningPlanFixture) {
       const found = findStopInPlan(fixture, stopId);
       if (!found) return;
 
-      if (!found.route) {
+      if (!found.area) {
         if (isUnassignedStopFullyExcluded(found.stop, excludedOrderIds)) return;
         setSelectedRouteId(null);
         setSelectedStopId(null);
@@ -114,7 +114,7 @@ export function usePlanningSelection(fixture: PlanningPlanFixture) {
       setRemoveDriverRouteId(null);
       setSelectedOrderId(null);
       setSelectedStopId(stopId);
-      setSelectedRouteId(found.route.routeId);
+      setSelectedRouteId(found.area.areaId);
       setPanelCollapsed(false);
     },
     [correctionStopId, excludedOrderIds, fixture],
@@ -185,7 +185,7 @@ export function usePlanningSelection(fixture: PlanningPlanFixture) {
   const openTransferFromStop = useCallback(
     (stopId: string) => {
       const found = findStopInPlan(fixture, stopId);
-      if (!found?.route) return;
+      if (!found?.area) return;
       setAreaPickerStopId(null);
       setDriverPickerRouteId(null);
       setPendingDriver(null);
@@ -195,7 +195,7 @@ export function usePlanningSelection(fixture: PlanningPlanFixture) {
       setSelectedUnassignedStopId(null);
       setSelectedOrderId(null);
       setSelectedStopId(stopId);
-      setSelectedRouteId(found.route.routeId);
+      setSelectedRouteId(found.area.areaId);
       setTransferFlow({ stopId, orderId: null, scope: 'stop', step: 'pick' });
       setPanelCollapsed(false);
     },
@@ -206,7 +206,7 @@ export function usePlanningSelection(fixture: PlanningPlanFixture) {
   const openTransferFromOrder = useCallback(
     (stopId: string, orderId: string) => {
       const found = findStopInPlan(fixture, stopId);
-      if (!found?.route) return;
+      if (!found?.area) return;
       setAreaPickerStopId(null);
       setDriverPickerRouteId(null);
       setPendingDriver(null);
@@ -216,7 +216,7 @@ export function usePlanningSelection(fixture: PlanningPlanFixture) {
       setSelectedUnassignedStopId(null);
       setSelectedStopId(stopId);
       setSelectedOrderId(orderId);
-      setSelectedRouteId(found.route.routeId);
+      setSelectedRouteId(found.area.areaId);
       if (found.stop.tasks.length > 1) {
         setTransferFlow({ stopId, orderId, scope: null, step: 'scope' });
       } else {
@@ -296,7 +296,7 @@ export function usePlanningSelection(fixture: PlanningPlanFixture) {
   const openLocationCorrection = useCallback(
     (stopId: string) => {
       const found = findStopInPlan(fixture, stopId);
-      if (!found?.route) return;
+      if (!found?.area) return;
       setAreaPickerStopId(null);
       setTransferFlow(null);
       setDriverPickerRouteId(null);
@@ -304,7 +304,7 @@ export function usePlanningSelection(fixture: PlanningPlanFixture) {
       setRemoveDriverRouteId(null);
       setSelectedUnassignedStopId(null);
       setSelectedStopId(stopId);
-      setSelectedRouteId(found.route.routeId);
+      setSelectedRouteId(found.area.areaId);
       setCorrectionStopId(stopId);
       setProposedLocation(null);
       setPanelCollapsed(false);
@@ -325,9 +325,9 @@ export function usePlanningSelection(fixture: PlanningPlanFixture) {
     setCorrectionStopId(null);
     setProposedLocation(null);
     const found = findStopInPlan(fixture, stopId);
-    if (found?.route) {
+    if (found?.area) {
       setSelectedStopId(stopId);
-      setSelectedRouteId(found.route.routeId);
+      setSelectedRouteId(found.area.areaId);
       setSelectedUnassignedStopId(null);
     }
     setPanelCollapsed(false);
@@ -429,6 +429,7 @@ export function usePlanningSelection(fixture: PlanningPlanFixture) {
 
   const selection: PlanningSelection = useMemo(
     () => ({
+      selectedAreaId: selectedRouteId,
       selectedRouteId,
       selectedStopId,
       selectedOrderId,
@@ -440,7 +441,7 @@ export function usePlanningSelection(fixture: PlanningPlanFixture) {
   const activeRouteId = useMemo(() => {
     if (selectedRouteId) return selectedRouteId;
     if (selectedStopId) {
-      return findStopInPlan(fixture, selectedStopId)?.route?.routeId ?? null;
+      return findStopInPlan(fixture, selectedStopId)?.area?.areaId ?? null;
     }
     return null;
   }, [fixture, selectedRouteId, selectedStopId]);
@@ -457,8 +458,8 @@ export function usePlanningSelection(fixture: PlanningPlanFixture) {
 
   const activeRouteStops = useMemo(() => {
     if (!activeRouteId) return null;
-    return fixture.routes.find((route) => route.routeId === activeRouteId)?.stops ?? null;
-  }, [activeRouteId, fixture.routes]);
+    return fixture.areas.find((area) => area.areaId === activeRouteId)?.stops ?? null;
+  }, [activeRouteId, fixture.areas]);
 
   const selectionMode =
     areaPickerStopId ||

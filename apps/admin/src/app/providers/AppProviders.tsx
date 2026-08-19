@@ -24,7 +24,7 @@ export function AppProviders({ children, plansPort, executionPort }: AppProvider
       <PlansFixtureProvider port={plansPort}>
         <ExecutionFixtureProvider port={executionPort}>
           {children}
-          {import.meta.env.DEV ? (
+          {import.meta.env.DEV && import.meta.env.MODE !== 'test' ? (
             <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
           ) : null}
         </ExecutionFixtureProvider>

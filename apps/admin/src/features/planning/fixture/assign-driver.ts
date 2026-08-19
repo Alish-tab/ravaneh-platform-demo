@@ -2,76 +2,79 @@ import type {
   PlanningDriver,
   PlanningPlanFixture,
 } from '@/features/planning/fixture/types';
+import { findArea } from '@/features/planning/planning-model';
 
 /**
- * Assign (or change) a driver on a route.
- * Rejects drivers already assigned to a different area (designer picker disables them).
+ * Assign (or change) a driver on an Area.
+ * Rejects drivers already assigned to a different area (picker disables them).
  */
 export function assignDriverToRoute(
   fixture: PlanningPlanFixture,
-  routeId: string,
+  areaId: string,
   driver: PlanningDriver,
 ): PlanningPlanFixture | null {
-  const target = fixture.routes.find((route) => route.routeId === routeId);
+  if (driver.hasPlanConflict) return null;
+  const target = findArea(fixture, areaId);
   if (!target) return null;
   if (target.driverId === driver.driverId) return null;
 
-  const heldElsewhere = fixture.routes.some(
-    (route) => route.routeId !== routeId && route.driverId === driver.driverId,
+  const heldElsewhere = fixture.areas.some(
+    (area) => area.areaId !== areaId && area.driverId === driver.driverId,
   );
   if (heldElsewhere) return null;
 
-  const routes = fixture.routes.map((route) => {
-    if (route.routeId !== routeId) return route;
+  const areas = fixture.areas.map((area) => {
+    if (area.areaId !== areaId) return area;
     return {
-      ...route,
+      ...area,
       driverId: driver.driverId,
       driverName: driver.driverName,
-      planState: route.planState === 'published' ? route.planState : ('assigned' as const),
+      planState: area.planState === 'published' ? area.planState : ('assigned' as const),
     };
   });
 
-  return { ...fixture, routes };
+  return { ...fixture, areas };
 }
 
 export function removeDriverFromRoute(
   fixture: PlanningPlanFixture,
-  routeId: string,
+  areaId: string,
 ): PlanningPlanFixture | null {
-  const target = fixture.routes.find((route) => route.routeId === routeId);
+  const target = findArea(fixture, areaId);
   if (!target?.driverId) return null;
 
-  const routes = fixture.routes.map((route) => {
-    if (route.routeId !== routeId) return route;
+  const areas = fixture.areas.map((area) => {
+    if (area.areaId !== areaId) return area;
     return {
-      ...route,
+      ...area,
       driverId: null,
       driverName: null,
       driverAssignmentLocked: false,
-      planState: route.planState === 'published' ? route.planState : ('draft' as const),
+      planState: area.planState === 'published' ? area.planState : ('draft' as const),
     };
   });
 
-  return { ...fixture, routes };
+  return { ...fixture, areas };
 }
 
 /**
- * Lock/unlock an existing driver assignment. Cannot lock a route without a driver.
+ * Lock/unlock an existing driver assignment. Cannot lock an area without a driver.
+ * Working Planning preference only.
  */
 export function setDriverAssignmentLocked(
   fixture: PlanningPlanFixture,
-  routeId: string,
+  areaId: string,
   locked: boolean,
 ): PlanningPlanFixture | null {
-  const target = fixture.routes.find((route) => route.routeId === routeId);
+  const target = findArea(fixture, areaId);
   if (!target) return null;
   if (locked && !target.driverId) return null;
   if (target.driverAssignmentLocked === locked) return fixture;
 
-  const routes = fixture.routes.map((route) => {
-    if (route.routeId !== routeId) return route;
-    return { ...route, driverAssignmentLocked: locked };
+  const areas = fixture.areas.map((area) => {
+    if (area.areaId !== areaId) return area;
+    return { ...area, driverAssignmentLocked: locked };
   });
 
-  return { ...fixture, routes };
+  return { ...fixture, areas };
 }

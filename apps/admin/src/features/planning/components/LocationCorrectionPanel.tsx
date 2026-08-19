@@ -2,11 +2,11 @@ import { Icon, ICONS } from '@/features/plans/components/icons';
 import { Button, LtrData } from '@/shared/ui';
 import { shortAddress } from '@/features/planning/fixture/planning-fixture';
 import type { PlanningLatLng } from '@/features/planning/fixture/update-stop-location';
-import type { PlanningRoute, PlanningStop } from '@/features/planning/fixture/types';
+import type { PlanningArea, PlanningStop } from '@/features/planning/fixture/types';
 
 type LocationCorrectionPanelProps = {
   stop: PlanningStop;
-  route: PlanningRoute;
+  route: PlanningArea;
   proposedLocation: PlanningLatLng | null;
   isSaving: boolean;
   onSave: () => void;
@@ -78,6 +78,20 @@ export function LocationCorrectionPanel({
       <div className="flex-1 overflow-y-auto px-3 py-3">
         <div className="mb-3 rounded-[var(--radius-sm)] border border-[rgba(61,123,212,0.18)] bg-[rgba(61,123,212,0.08)] px-2.5 py-2 text-[10.5px] leading-relaxed text-[var(--accent-text)]">
           روی نقشه کلیک کنید تا موقعیت پیشنهادی را انتخاب کنید.
+        </div>
+
+        <div className="mb-2">
+          <div className="mb-1.5 text-[9.5px] font-semibold tracking-wide text-[var(--text-muted)] uppercase">
+            RAW SOURCE
+          </div>
+          <div className="rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-2">
+            <div className="mb-0.5 text-[10.5px] text-[var(--text-muted)]">مختصات واردشده</div>
+            <LtrData className="text-[11.5px] text-[var(--text-secondary)]" data-testid="correction-raw-coords">
+              {stop.rawLat != null && stop.rawLng != null
+                ? `${stop.rawLat.toFixed(5)}, ${stop.rawLng.toFixed(5)}`
+                : '—'}
+            </LtrData>
+          </div>
         </div>
 
         <div className="mb-2">

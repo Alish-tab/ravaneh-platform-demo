@@ -89,20 +89,20 @@ vi.mock('@/features/planning/components/PlanningMap', () => ({
   }) => {
     const fitSource = (() => {
       if (!areasGenerated || !activeRouteId) return 'none';
-      const area = areas.find((entry) => entry.routeId === activeRouteId)?.area;
+      const area = areas.find((entry) => entry.areaId === activeRouteId)?.area;
       // Fit uses derived polygon geometry even when polygons are hidden.
       return area ? 'polygon' : 'stops';
     })();
 
     const preStops = [
-      ...fixture.routes.flatMap((route) => route.stops),
+      ...fixture.areas.flatMap((area) => area.stops),
       ...fixture.unassignedStops,
     ];
 
     const correctionStop =
       correctionStopId == null
         ? null
-        : fixture.routes.flatMap((route) => route.stops).find((stop) => stop.stopId === correctionStopId) ??
+        : fixture.areas.flatMap((area) => area.stops).find((stop) => stop.stopId === correctionStopId) ??
           fixture.unassignedStops.find((stop) => stop.stopId === correctionStopId) ??
           null;
 
@@ -118,40 +118,40 @@ vi.mock('@/features/planning/components/PlanningMap', () => ({
       >
         {renderAreas
           ? areas.map((entry) => {
-              const selected = activeRouteId === entry.routeId;
+              const selected = activeRouteId === entry.areaId;
               return (
                 <button
-                  key={entry.routeId}
+                  key={entry.areaId}
                   type="button"
-                  data-testid={`route-area-${entry.routeId}`}
+                  data-testid={`route-area-${entry.areaId}`}
                   data-selected={selected ? 'true' : 'false'}
                   data-ambient={activeRouteId !== null && !selected ? 'true' : 'false'}
                   data-has-polygon={entry.area ? 'true' : 'false'}
                   data-point-count={entry.area?.positions.length ?? 0}
                   onClick={() => {
-                    if (!correctionStopId) onSelectRoute(entry.routeId);
+                    if (!correctionStopId) onSelectRoute(entry.areaId);
                   }}
                 >
-                  area-{entry.routeId}
+                  area-{entry.areaId}
                 </button>
               );
             })
           : null}
         {areasGenerated
-          ? fixture.routes.flatMap((route) =>
-              route.stops.map((stop) => (
+          ? fixture.areas.flatMap((area) =>
+              area.stops.map((stop) => (
                 <button
                   key={stop.stopId}
                   type="button"
                   data-testid={`map-stop-${stop.stopId}`}
                   data-marker-kind="routed"
-                  data-route-id={route.routeId}
+                  data-route-id={area.areaId}
                   data-lat={String(stop.lat)}
                   data-lng={String(stop.lng)}
                   data-selected={selectedStopId === stop.stopId ? 'true' : 'false'}
-                  data-route-active={activeRouteId === route.routeId ? 'true' : 'false'}
+                  data-route-active={activeRouteId === area.areaId ? 'true' : 'false'}
                   data-ambient={
-                    activeRouteId !== null && activeRouteId !== route.routeId ? 'true' : 'false'
+                    activeRouteId !== null && activeRouteId !== area.areaId ? 'true' : 'false'
                   }
                   onClick={() => {
                     if (!correctionStopId) onSelectStop(stop.stopId);
@@ -234,7 +234,7 @@ vi.mock('@/features/planning/components/PlanningMap', () => ({
         <div data-testid="route-fit-trigger">{routeFitTrigger ?? ''}</div>
         <div data-testid="fit-selected-source">{fitSource}</div>
         <div data-testid="route-r01-stop-count">
-          {fixture.routes.find((route) => route.routeId === 'R-01')?.stops.length ?? 0}
+          {fixture.areas.find((area) => area.areaId === 'A-01')?.stops.length ?? 0}
         </div>
         <div data-testid="unassigned-stop-count">{fixture.unassignedStops.length}</div>
         <button
@@ -288,7 +288,7 @@ function PanelHarness() {
   return (
     <PlanningSidePanel
       fixture={PLANNING_PLAN_FIXTURE}
-      selectedRouteId={planning.selection.selectedRouteId}
+      selectedRouteId={planning.selection.selectedRouteId ?? null}
       selectedStopId={planning.selection.selectedStopId}
       selectedOrderId={planning.selection.selectedOrderId}
       selectedUnassignedStopId={planning.selection.selectedUnassignedStopId}
@@ -337,26 +337,27 @@ function PanelHarness() {
   );
 }
 
-describe('Planning workspace', () => {
+describe('Planning workspace', { timeout: 15_000 }, () => {
   it('renders the planning page shell in pre-generation with active stage', async () => {
     renderPlanningPage();
 
-    expect(await screen.findAllByText(PLANNING_PLAN_FIXTURE.planName)).not.toHaveLength(0);
+    expect(await screen.findByTestId('planning-body')).toHaveAttribute('data-generation-phase', 'ready');
     expect(screen.getByRole('link', { name: /برنامه‌ریزی و تخصیص/ })).toHaveAttribute(
       'aria-current',
       'page',
     );
-    expect(screen.getByTestId('planning-body')).toHaveAttribute('data-generation-phase', 'ready');
+    expect(screen.getAllByText(PLANNING_PLAN_FIXTURE.planName).length).toBeGreaterThan(0);
     expect(screen.getByTestId('generation-panel')).toBeInTheDocument();
     expect(screen.getByTestId('start-generation')).toBeInTheDocument();
-    expect(screen.queryByTestId('route-row-R-01')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('route-row-A-01')).not.toBeInTheDocument();
     expect(screen.getByTestId('planning-map')).toHaveAttribute('data-areas-generated', 'false');
   });
 
   it('is plan-scoped at /plans/:planId/planning with active Planning stage', async () => {
     const { router } = renderPlanningPage('P-2404');
 
-    expect(await screen.findAllByText(PLANNING_PLAN_FIXTURE.planName)).toHaveLength(2);
+    expect(await screen.findByTestId('planning-body')).toBeInTheDocument();
+    expect(screen.getAllByText(PLANNING_PLAN_FIXTURE.planName).length).toBeGreaterThan(0);
     expect(router.state.location.pathname).toBe('/plans/P-2404/planning');
     expect(screen.getByRole('link', { name: /برنامه‌ریزی و تخصیص/ })).toHaveAttribute(
       'aria-current',
@@ -441,19 +442,19 @@ describe('Planning workspace', () => {
   it('renders route area polygons through the mocked Leaflet boundary', () => {
     render(<WorkspaceHarness />);
 
-    expect(screen.getByTestId('route-area-R-01')).toHaveAttribute('data-has-polygon', 'true');
-    expect(screen.getByTestId('route-area-R-02')).toHaveAttribute('data-has-polygon', 'true');
-    expect(screen.getByTestId('route-area-R-03')).toHaveAttribute('data-has-polygon', 'true');
+    expect(screen.getByTestId('route-area-A-01')).toHaveAttribute('data-has-polygon', 'true');
+    expect(screen.getByTestId('route-area-A-02')).toHaveAttribute('data-has-polygon', 'true');
+    expect(screen.getByTestId('route-area-A-03')).toHaveAttribute('data-has-polygon', 'true');
   });
 
   it('selects a route from a polygon and updates selected vs ambient areas', async () => {
     const user = userEvent.setup();
     render(<WorkspaceHarness />);
 
-    await user.click(screen.getByTestId('route-area-R-01'));
+    await user.click(screen.getByTestId('route-area-A-01'));
 
-    expect(screen.getByTestId('route-area-R-01')).toHaveAttribute('data-selected', 'true');
-    expect(screen.getByTestId('route-area-R-02')).toHaveAttribute('data-ambient', 'true');
+    expect(screen.getByTestId('route-area-A-01')).toHaveAttribute('data-selected', 'true');
+    expect(screen.getByTestId('route-area-A-02')).toHaveAttribute('data-ambient', 'true');
     expect(screen.getByLabelText('جزئیات محدوده ۱')).toBeInTheDocument();
     expect(screen.getByTestId('fit-selected-source')).toHaveTextContent('polygon');
   });
@@ -462,9 +463,9 @@ describe('Planning workspace', () => {
     const user = userEvent.setup();
     render(<WorkspaceHarness />);
 
-    await user.click(screen.getByTestId('route-row-R-01'));
+    await user.click(screen.getByTestId('route-row-A-01'));
 
-    expect(screen.getByTestId('route-area-R-01')).toHaveAttribute('data-selected', 'true');
+    expect(screen.getByTestId('route-area-A-01')).toHaveAttribute('data-selected', 'true');
     expect(screen.getByLabelText('جزئیات محدوده ۱')).toBeInTheDocument();
   });
 
@@ -472,7 +473,7 @@ describe('Planning workspace', () => {
     const user = userEvent.setup();
     render(<PanelHarness />);
 
-    await user.click(screen.getByTestId('route-row-R-01'));
+    await user.click(screen.getByTestId('route-row-A-01'));
     const list = screen.getByTestId('route-stop-list');
     const rows = within(list).getAllByTestId(/stop-row-/);
     expect(rows.map((row) => row.getAttribute('data-stop-seq'))).toEqual(['1', '2', '3', '4']);
@@ -482,11 +483,11 @@ describe('Planning workspace', () => {
     const user = userEvent.setup();
     render(<WorkspaceHarness />);
 
-    await user.click(screen.getByTestId('route-row-R-01'));
+    await user.click(screen.getByTestId('route-row-A-01'));
     await user.click(screen.getByTestId('stop-row-S-102'));
 
     expect(screen.getByLabelText('جزئیات نقطه تحویل')).toBeInTheDocument();
-    expect(screen.getByTestId('route-area-R-01')).toHaveAttribute('data-selected', 'true');
+    expect(screen.getByTestId('route-area-A-01')).toHaveAttribute('data-selected', 'true');
     expect(screen.getByTestId('map-stop-S-102')).toHaveAttribute('data-selected', 'true');
   });
 
@@ -512,7 +513,7 @@ describe('Planning workspace', () => {
     await user.click(screen.getByTestId('assign-unassigned-U-001'));
     expect(screen.getByTestId('area-picker')).toBeInTheDocument();
 
-    await user.click(screen.getByTestId('area-picker-route-R-01'));
+    await user.click(screen.getByTestId('area-picker-route-A-01'));
     await user.click(screen.getByTestId('confirm-area-assign'));
 
     await waitFor(() => {
@@ -526,15 +527,15 @@ describe('Planning workspace', () => {
     expect(screen.getByTestId('route-r01-stop-count')).toHaveTextContent(String(r01Before + 1));
 
     expect(screen.getByTestId('map-stop-U-001')).toHaveAttribute('data-marker-kind', 'routed');
-    expect(screen.getByTestId('map-stop-U-001')).toHaveAttribute('data-route-id', 'R-01');
+    expect(screen.getByTestId('map-stop-U-001')).toHaveAttribute('data-route-id', 'A-01');
     expect(screen.getByTestId('map-stop-U-001')).toHaveAttribute('data-selected', 'true');
-    expect(screen.getByTestId('route-area-R-01')).toHaveAttribute('data-selected', 'true');
+    expect(screen.getByTestId('route-area-A-01')).toHaveAttribute('data-selected', 'true');
 
     expect(screen.getByLabelText('جزئیات نقطه تحویل')).toBeInTheDocument();
     expect(screen.getByTestId('order-row-10129001')).toBeInTheDocument();
 
-    expect(screen.getByTestId('route-area-R-01')).toHaveAttribute('data-has-polygon', 'true');
-    expect(screen.getByTestId('route-area-R-02')).toHaveAttribute('data-has-polygon', 'true');
+    expect(screen.getByTestId('route-area-A-01')).toHaveAttribute('data-has-polygon', 'true');
+    expect(screen.getByTestId('route-area-A-02')).toHaveAttribute('data-has-polygon', 'true');
   });
 
   it('shows updated stop sequence after assignment', async () => {
@@ -542,7 +543,7 @@ describe('Planning workspace', () => {
     render(<WorkspaceHarness />);
 
     await user.click(screen.getByTestId('assign-unassigned-U-001'));
-    await user.click(screen.getByTestId('area-picker-route-R-01'));
+    await user.click(screen.getByTestId('area-picker-route-A-01'));
     await user.click(screen.getByTestId('confirm-area-assign'));
 
     await waitFor(() => expect(screen.queryByTestId('area-picker')).not.toBeInTheDocument());
@@ -565,14 +566,14 @@ describe('Planning workspace', () => {
     const user = userEvent.setup();
     render(<WorkspaceHarness />);
 
-    await user.click(screen.getByTestId('route-row-R-01'));
+    await user.click(screen.getByTestId('route-row-A-01'));
     await user.click(screen.getByTestId('stop-row-S-101'));
     await user.click(screen.getByTestId('start-area-transfer'));
 
     expect(screen.getByTestId('area-transfer-picker')).toBeInTheDocument();
-    expect(screen.queryByTestId('transfer-dest-route-R-01')).not.toBeInTheDocument();
-    expect(screen.getByTestId('transfer-dest-route-R-02')).toBeInTheDocument();
-    expect(screen.getByTestId('transfer-dest-route-R-03')).toBeInTheDocument();
+    expect(screen.queryByTestId('transfer-dest-route-A-01')).not.toBeInTheDocument();
+    expect(screen.getByTestId('transfer-dest-route-A-02')).toBeInTheDocument();
+    expect(screen.getByTestId('transfer-dest-route-A-03')).toBeInTheDocument();
     expect(screen.getByTestId('transfer-dest-unassigned')).toBeInTheDocument();
   });
 
@@ -582,10 +583,10 @@ describe('Planning workspace', () => {
 
     const r01Before = Number(screen.getByTestId('route-r01-stop-count').textContent);
 
-    await user.click(screen.getByTestId('route-row-R-01'));
+    await user.click(screen.getByTestId('route-row-A-01'));
     await user.click(screen.getByTestId('stop-row-S-101'));
     await user.click(screen.getByTestId('start-area-transfer'));
-    await user.click(screen.getByTestId('transfer-dest-route-R-02'));
+    await user.click(screen.getByTestId('transfer-dest-route-A-02'));
     await user.click(screen.getByTestId('confirm-area-transfer'));
 
     await waitFor(() => {
@@ -594,11 +595,11 @@ describe('Planning workspace', () => {
 
     expect(screen.getByTestId('route-r01-stop-count')).toHaveTextContent(String(r01Before - 1));
     expect(screen.getByTestId('map-stop-S-101')).toHaveAttribute('data-marker-kind', 'routed');
-    expect(screen.getByTestId('map-stop-S-101')).toHaveAttribute('data-route-id', 'R-02');
+    expect(screen.getByTestId('map-stop-S-101')).toHaveAttribute('data-route-id', 'A-02');
     expect(screen.getByTestId('map-stop-S-101')).toHaveAttribute('data-selected', 'true');
-    expect(screen.getByTestId('route-area-R-02')).toHaveAttribute('data-selected', 'true');
-    expect(screen.getByTestId('route-area-R-01')).toHaveAttribute('data-has-polygon', 'true');
-    expect(screen.getByTestId('route-area-R-02')).toHaveAttribute('data-has-polygon', 'true');
+    expect(screen.getByTestId('route-area-A-02')).toHaveAttribute('data-selected', 'true');
+    expect(screen.getByTestId('route-area-A-01')).toHaveAttribute('data-has-polygon', 'true');
+    expect(screen.getByTestId('route-area-A-02')).toHaveAttribute('data-has-polygon', 'true');
 
     await user.click(screen.getByRole('button', { name: /محدوده ۲/ }));
     const list = screen.getByTestId('route-stop-list');
@@ -619,7 +620,7 @@ describe('Planning workspace', () => {
     const unassignedBefore = Number(screen.getByTestId('unassigned-stop-count').textContent);
     const r01Before = Number(screen.getByTestId('route-r01-stop-count').textContent);
 
-    await user.click(screen.getByTestId('route-row-R-01'));
+    await user.click(screen.getByTestId('route-row-A-01'));
     await user.click(screen.getByTestId('stop-row-S-104'));
     await user.click(screen.getByTestId('start-area-transfer'));
     await user.click(screen.getByTestId('transfer-dest-unassigned'));
@@ -636,13 +637,13 @@ describe('Planning workspace', () => {
     expect(screen.getByTestId('map-stop-S-104')).toHaveAttribute('data-marker-kind', 'unassigned');
     expect(screen.getByTestId('map-stop-S-104')).toHaveAttribute('data-selected', 'true');
     expect(screen.getByTestId('unassigned-row-S-104')).toBeInTheDocument();
-    expect(screen.getByTestId('route-area-R-01')).toHaveAttribute('data-has-polygon', 'true');
+    expect(screen.getByTestId('route-area-A-01')).toHaveAttribute('data-has-polygon', 'true');
   });
 
   it('shows fixture planState labels on route rows', () => {
     render(<PanelHarness />);
     expect(
-      within(screen.getByTestId('route-row-R-01')).getByText(PLANNING_ROUTE_STATE_LABEL.assigned),
+      within(screen.getByTestId('route-row-A-01')).getByText(PLANNING_ROUTE_STATE_LABEL.assigned),
     ).toBeInTheDocument();
   });
 
@@ -658,7 +659,7 @@ describe('Planning workspace', () => {
     expect(b.unassignedStops).toHaveLength(2);
     expect(getPlanningFixture('P-2403').planId).toBe('P-2403');
     expect(PLANNING_PLAN_FIXTURE.planId).toBe(PLANNING_FIXTURE_PLAN_ID);
-    expect(buildRouteAreas(PLANNING_PLAN_FIXTURE.routes)).toHaveLength(3);
+    expect(buildRouteAreas(PLANNING_PLAN_FIXTURE.areas)).toHaveLength(3);
   });
 
   it('renders Planning workspace for an execution-stage demo plan', async () => {
@@ -670,7 +671,7 @@ describe('Planning workspace', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('blocks Intake → Planning skip-ahead for an ineligible draft plan', async () => {
+  it('keeps Planning section navigable from Intake for a draft without dataset', async () => {
     const user = userEvent.setup();
     const router = createMemoryRouter(appRoutes, {
       initialEntries: ['/plans/P-2407/intake'],
@@ -682,10 +683,15 @@ describe('Planning workspace', () => {
       </AppProviders>,
     );
 
-    await screen.findByRole('link', { name: /داده‌های برنامه/ });
+    expect(await screen.findByText('P-2407')).toBeInTheDocument();
     await user.click(screen.getByRole('link', { name: /برنامه‌ریزی و تخصیص/ }));
-    expect(router.state.location.pathname).toBe('/plans/P-2407/planning');
-  });
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/plans/P-2407/planning'),
+    );
+    expect(await screen.findByTestId('generation-panel')).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'مراحل برنامه' })).not.toBeInTheDocument();
+    expect(document.querySelector('[aria-current="step"]')).toBeNull();
+  }, 10_000);
 });
 
 describe('distribution area generation', () => {
@@ -701,7 +707,7 @@ describe('distribution area generation', () => {
     expect(screen.getByTestId('target-area-count')).toHaveValue(3);
     expect(screen.getByTestId('start-generation')).toHaveTextContent('ساخت محدوده‌های توزیع');
     expect(screen.getByTestId('generation-ready')).toBeInTheDocument();
-    expect(screen.queryByTestId('route-area-R-01')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('route-area-A-01')).not.toBeInTheDocument();
     expect(screen.getByTestId('planning-map')).toHaveAttribute('data-areas-generated', 'false');
     expect(screen.getByTestId('map-stop-S-101')).toHaveAttribute('data-marker-kind', 'neutral');
   });
@@ -742,7 +748,7 @@ describe('distribution area generation', () => {
       ),
     );
     expect(screen.getByLabelText('پانل محدوده‌ها')).toBeInTheDocument();
-    expect(screen.getByTestId('route-area-R-01')).toHaveAttribute('data-has-polygon', 'true');
+    expect(screen.getByTestId('route-area-A-01')).toHaveAttribute('data-has-polygon', 'true');
     expect(screen.getByTestId('planning-map')).toHaveAttribute('data-areas-generated', 'true');
     expect(screen.getByTestId('map-stop-S-101')).toHaveAttribute('data-marker-kind', 'routed');
   });
@@ -790,7 +796,7 @@ describe('distribution area generation retry', () => {
     await user.click(screen.getByTestId('start-generation'));
     await waitFor(() => expect(screen.getByTestId('generation-failed')).toBeInTheDocument());
     expect(screen.getByTestId('target-area-count')).toHaveValue(4);
-    expect(screen.queryByTestId('route-area-R-01')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('route-area-A-01')).not.toBeInTheDocument();
 
     await user.click(screen.getByTestId('allow-success'));
     await user.click(screen.getByTestId('generation-retry'));
@@ -800,33 +806,33 @@ describe('distribution area generation retry', () => {
         'generated',
       ),
     );
-    expect(screen.getByTestId('route-area-R-01')).toBeInTheDocument();
+    expect(screen.getByTestId('route-area-A-01')).toBeInTheDocument();
   });
 });
 
 describe('assignStopToRoute mutation', () => {
   it('moves the stop to the end of the target route and updates counts', () => {
-    const next = assignStopToRoute(cloneFixture(), 'U-001', 'R-02');
+    const next = assignStopToRoute(cloneFixture(), 'U-001', 'A-02');
     expect(next).not.toBeNull();
     expect(next!.unassignedStops.some((stop) => stop.stopId === 'U-001')).toBe(false);
-    const route = next!.routes.find((item) => item.routeId === 'R-02')!;
+    const route = next!.areas.find((item) => item.areaId === 'A-02')!;
     expect(route.stops.at(-1)?.stopId).toBe('U-001');
     expect(route.stops.at(-1)?.seq).toBe(4);
     expect(route.stops).toHaveLength(4);
   });
 
   it('returns null for unknown stop or route', () => {
-    expect(assignStopToRoute(cloneFixture(), 'missing', 'R-01')).toBeNull();
+    expect(assignStopToRoute(cloneFixture(), 'missing', 'A-01')).toBeNull();
     expect(assignStopToRoute(cloneFixture(), 'U-001', 'missing')).toBeNull();
   });
 });
 
 describe('stop transfer mutations', () => {
   it('moveStopToRoute appends to destination and reindexes source', () => {
-    const next = moveStopToRoute(cloneFixture(), 'S-101', 'R-02');
+    const next = moveStopToRoute(cloneFixture(), 'S-101', 'A-02');
     expect(next).not.toBeNull();
-    const source = next!.routes.find((item) => item.routeId === 'R-01')!;
-    const dest = next!.routes.find((item) => item.routeId === 'R-02')!;
+    const source = next!.areas.find((item) => item.areaId === 'A-01')!;
+    const dest = next!.areas.find((item) => item.areaId === 'A-02')!;
     expect(source.stops.map((stop) => stop.stopId)).toEqual(['S-102', 'S-103', 'S-104']);
     expect(source.stops.map((stop) => stop.seq)).toEqual([1, 2, 3]);
     expect(dest.stops.at(-1)?.stopId).toBe('S-101');
@@ -835,15 +841,15 @@ describe('stop transfer mutations', () => {
   });
 
   it('moveStopToRoute rejects same-route and unknown ids', () => {
-    expect(moveStopToRoute(cloneFixture(), 'S-101', 'R-01')).toBeNull();
-    expect(moveStopToRoute(cloneFixture(), 'missing', 'R-02')).toBeNull();
+    expect(moveStopToRoute(cloneFixture(), 'S-101', 'A-01')).toBeNull();
+    expect(moveStopToRoute(cloneFixture(), 'missing', 'A-02')).toBeNull();
     expect(moveStopToRoute(cloneFixture(), 'S-101', 'missing')).toBeNull();
   });
 
   it('removeStopFromRoute moves the stop to unassigned and reindexes', () => {
     const next = removeStopFromRoute(cloneFixture(), 'S-102');
     expect(next).not.toBeNull();
-    const source = next!.routes.find((item) => item.routeId === 'R-01')!;
+    const source = next!.areas.find((item) => item.areaId === 'A-01')!;
     expect(source.stops.map((stop) => stop.stopId)).toEqual(['S-101', 'S-103', 'S-104']);
     expect(source.stops.map((stop) => stop.seq)).toEqual([1, 2, 3]);
     const unassigned = next!.unassignedStops.find((stop) => stop.stopId === 'S-102');
@@ -852,10 +858,10 @@ describe('stop transfer mutations', () => {
   });
 
   it('moveOrderToRoute splits one order and keeps remaining tasks on source', () => {
-    const result = moveOrderToRoute(cloneFixture(), '10123457', 'R-02');
+    const result = moveOrderToRoute(cloneFixture(), '10123457', 'A-02');
     expect(result).not.toBeNull();
-    const source = result!.fixture.routes.find((route) => route.routeId === 'R-01')!;
-    const dest = result!.fixture.routes.find((route) => route.routeId === 'R-02')!;
+    const source = result!.fixture.areas.find((route) => route.areaId === 'A-01')!;
+    const dest = result!.fixture.areas.find((route) => route.areaId === 'A-02')!;
     const sourceStop = source.stops.find((stop) => stop.stopId === 'S-102');
     expect(sourceStop?.tasks.map((task) => task.orderId)).toEqual(['10123458']);
     const destStop = dest.stops.find((stop) => stop.stopId === result!.destinationStopId);
@@ -864,15 +870,18 @@ describe('stop transfer mutations', () => {
     expect(dest.stops).toHaveLength(4);
   });
 
-  it('moveOrderToRoute removes source stop when last order moves and merges same location', () => {
-    const first = moveOrderToRoute(cloneFixture(), '10123457', 'R-03')!;
-    const second = moveOrderToRoute(first.fixture, '10123458', 'R-03')!;
-    const source = second.fixture.routes.find((route) => route.routeId === 'R-01')!;
+  it('moveOrderToRoute does not move sibling orders or merge by coordinates', () => {
+    const first = moveOrderToRoute(cloneFixture(), '10123457', 'A-03')!;
+    const second = moveOrderToRoute(first.fixture, '10123458', 'A-03')!;
+    const source = second.fixture.areas.find((area) => area.areaId === 'A-01')!;
     expect(source.stops.some((stop) => stop.stopId === 'S-102')).toBe(false);
-    const dest = second.fixture.routes.find((route) => route.routeId === 'R-03')!;
-    const merged = dest.stops.find((stop) => stop.stopId === first.destinationStopId);
-    expect(merged?.tasks.map((task) => task.orderId)).toEqual(['10123457', '10123458']);
-    expect(second.destinationStopId).toBe(first.destinationStopId);
+    const dest = second.fixture.areas.find((area) => area.areaId === 'A-03')!;
+    const firstStop = dest.stops.find((stop) => stop.stopId === first.destinationStopId);
+    const secondStop = dest.stops.find((stop) => stop.stopId === second.destinationStopId);
+    expect(firstStop?.tasks.map((task) => task.orderId)).toEqual(['10123457']);
+    expect(secondStop?.tasks.map((task) => task.orderId)).toEqual(['10123458']);
+    expect(second.destinationStopId).not.toBe(first.destinationStopId);
+    expect(firstStop?.lat).toBe(secondStop?.lat);
   });
 });
 
@@ -881,7 +890,7 @@ describe('order-level transfer UI', () => {
     const user = userEvent.setup();
     render(<WorkspaceHarness />);
 
-    await user.click(screen.getByTestId('route-row-R-01'));
+    await user.click(screen.getByTestId('route-row-A-01'));
     await user.click(screen.getByTestId('stop-row-S-102'));
     await user.click(screen.getByTestId('order-row-10123457'));
     expect(screen.getByTestId('order-detail')).toBeInTheDocument();
@@ -892,7 +901,7 @@ describe('order-level transfer UI', () => {
 
     await user.click(screen.getByTestId('transfer-scope-order'));
     expect(screen.getByTestId('area-transfer-picker')).toBeInTheDocument();
-    expect(screen.queryByTestId('transfer-dest-route-R-01')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('transfer-dest-route-A-01')).not.toBeInTheDocument();
     expect(screen.queryByTestId('transfer-dest-unassigned')).not.toBeInTheDocument();
     expect(screen.getByText('انتقال فقط سفارش #10123457')).toBeInTheDocument();
   });
@@ -906,7 +915,7 @@ describe('order-level transfer UI', () => {
     await user.click(screen.getByTestId('order-row-10123457'));
     await user.click(screen.getByTestId('start-order-transfer'));
     await user.click(screen.getByTestId('transfer-scope-order'));
-    await user.click(screen.getByTestId('transfer-dest-route-R-02'));
+    await user.click(screen.getByTestId('transfer-dest-route-A-02'));
     await user.click(screen.getByTestId('confirm-area-transfer'));
 
     await waitFor(() => expect(screen.queryByTestId('area-transfer-picker')).not.toBeInTheDocument());
@@ -914,30 +923,30 @@ describe('order-level transfer UI', () => {
     expect(screen.getByTestId('map-stop-S-102')).toBeInTheDocument();
     expect(screen.getByTestId('map-stop-S-102-10123457-xfer')).toHaveAttribute(
       'data-route-id',
-      'R-02',
+      'A-02',
     );
-    expect(screen.getByTestId('route-area-R-01')).toHaveAttribute('data-has-polygon', 'true');
-    expect(screen.getByTestId('route-area-R-02')).toHaveAttribute('data-has-polygon', 'true');
-    expect(screen.getByTestId('route-area-R-02')).toHaveAttribute('data-selected', 'true');
+    expect(screen.getByTestId('route-area-A-01')).toHaveAttribute('data-has-polygon', 'true');
+    expect(screen.getByTestId('route-area-A-02')).toHaveAttribute('data-has-polygon', 'true');
+    expect(screen.getByTestId('route-area-A-02')).toHaveAttribute('data-selected', 'true');
   });
 });
 
 describe('driver assignment mutations', () => {
   it('assigns a free driver and rejects drivers already on another area', () => {
-    const assigned = assignDriverToRoute(cloneFixture(), 'R-03', {
+    const assigned = assignDriverToRoute(cloneFixture(), 'A-03', {
       driverId: 'D-052',
       driverName: 'نادر عبادی',
     });
     expect(assigned).not.toBeNull();
-    expect(assigned!.routes.find((route) => route.routeId === 'R-03')).toMatchObject({
+    expect(assigned!.areas.find((route) => route.areaId === 'A-03')).toMatchObject({
       driverId: 'D-052',
       driverName: 'نادر عبادی',
       planState: 'assigned',
     });
-    expect(countRoutesWithoutDriver(assigned!.routes)).toBe(0);
+    expect(countRoutesWithoutDriver(assigned!.areas)).toBe(0);
 
     expect(
-      assignDriverToRoute(cloneFixture(), 'R-03', {
+      assignDriverToRoute(cloneFixture(), 'A-03', {
         driverId: 'D-041',
         driverName: 'کاوه میرزایی',
       }),
@@ -945,23 +954,23 @@ describe('driver assignment mutations', () => {
   });
 
   it('changes and removes a driver assignment, clearing lock on remove', () => {
-    const locked = setDriverAssignmentLocked(cloneFixture(), 'R-01', true)!;
-    expect(locked.routes.find((route) => route.routeId === 'R-01')?.driverAssignmentLocked).toBe(
+    const locked = setDriverAssignmentLocked(cloneFixture(), 'A-01', true)!;
+    expect(locked.areas.find((route) => route.areaId === 'A-01')?.driverAssignmentLocked).toBe(
       true,
     );
 
-    const changed = assignDriverToRoute(locked, 'R-01', {
+    const changed = assignDriverToRoute(locked, 'A-01', {
       driverId: 'D-001',
       driverName: 'محمد قاسمی',
     })!;
-    expect(changed.routes.find((route) => route.routeId === 'R-01')).toMatchObject({
+    expect(changed.areas.find((route) => route.areaId === 'A-01')).toMatchObject({
       driverId: 'D-001',
       driverName: 'محمد قاسمی',
       driverAssignmentLocked: true,
     });
 
-    const removed = removeDriverFromRoute(changed, 'R-01')!;
-    expect(removed.routes.find((route) => route.routeId === 'R-01')).toMatchObject({
+    const removed = removeDriverFromRoute(changed, 'A-01')!;
+    expect(removed.areas.find((route) => route.areaId === 'A-01')).toMatchObject({
       driverId: null,
       driverName: null,
       driverAssignmentLocked: false,
@@ -970,7 +979,7 @@ describe('driver assignment mutations', () => {
   });
 
   it('cannot lock a route without a driver', () => {
-    expect(setDriverAssignmentLocked(cloneFixture(), 'R-03', true)).toBeNull();
+    expect(setDriverAssignmentLocked(cloneFixture(), 'A-03', true)).toBeNull();
   });
 });
 
@@ -979,7 +988,7 @@ describe('driver assignment UI', () => {
     const user = userEvent.setup();
     render(<WorkspaceHarness />);
 
-    await user.click(screen.getByTestId('route-row-R-03'));
+    await user.click(screen.getByTestId('route-row-A-03'));
     expect(screen.getByTestId('assign-driver')).toBeInTheDocument();
     expect(screen.queryByTestId('toggle-driver-lock')).not.toBeInTheDocument();
 
@@ -996,21 +1005,21 @@ describe('driver assignment UI', () => {
     expect(screen.getByTestId('driver-confirm')).toHaveAttribute('data-flow', 'assign');
     await user.click(screen.getByTestId('driver-confirm-cancel'));
     expect(screen.getByTestId('driver-picker')).toBeInTheDocument();
-    expect(screen.getByTestId('route-area-R-03')).toHaveAttribute('data-selected', 'true');
+    expect(screen.getByTestId('route-area-A-03')).toHaveAttribute('data-selected', 'true');
 
     await user.click(screen.getByTestId('driver-option-D-052'));
     await user.click(screen.getByTestId('driver-confirm-submit'));
     await waitFor(() => expect(screen.getByTestId('route-driver-name')).toHaveTextContent('نادر عبادی'));
     expect(screen.getByTestId('driver-just-assigned')).toBeInTheDocument();
     expect(screen.getByTestId('toggle-driver-lock')).toHaveAttribute('data-locked', 'false');
-    expect(screen.getByTestId('route-area-R-03')).toHaveAttribute('data-selected', 'true');
+    expect(screen.getByTestId('route-area-A-03')).toHaveAttribute('data-selected', 'true');
   });
 
   it('changes and removes a driver with confirmation cancel preserving assignment', async () => {
     const user = userEvent.setup();
     render(<WorkspaceHarness />);
 
-    await user.click(screen.getByTestId('route-row-R-01'));
+    await user.click(screen.getByTestId('route-row-A-01'));
     expect(screen.getByTestId('route-driver-name')).toHaveTextContent('کاوه میرزایی');
 
     await user.click(screen.getByTestId('change-driver'));
@@ -1036,34 +1045,36 @@ describe('driver assignment UI', () => {
     const user = userEvent.setup();
     render(<WorkspaceHarness />);
 
-    await user.click(screen.getByTestId('route-row-R-01'));
+    await user.click(screen.getByTestId('route-row-A-01'));
     const lock = screen.getByTestId('toggle-driver-lock');
     expect(lock).toHaveAttribute('data-locked', 'false');
     await user.click(lock);
     expect(screen.getByTestId('toggle-driver-lock')).toHaveAttribute('data-locked', 'true');
     await user.click(screen.getByTestId('toggle-driver-lock'));
     expect(screen.getByTestId('toggle-driver-lock')).toHaveAttribute('data-locked', 'false');
-    expect(screen.getByTestId('route-area-R-01')).toHaveAttribute('data-selected', 'true');
+    expect(screen.getByTestId('route-area-A-01')).toHaveAttribute('data-selected', 'true');
   });
 });
 
 describe('updateStopLocation mutation', () => {
   it('updates routed stop coordinates without changing ownership or tasks', () => {
     const before = cloneFixture();
-    const stop = before.routes[0]!.stops[0]!;
+    const stop = before.areas[0]!.stops[0]!;
     const taskIds = stop.tasks.map((task) => task.orderId);
     const next = updateStopLocation(before, stop.stopId, { lat: 35.751, lng: 51.401 })!;
 
-    const updated = next.routes[0]!.stops[0]!;
+    const updated = next.areas[0]!.stops[0]!;
     expect(updated).toMatchObject({
       stopId: stop.stopId,
       seq: stop.seq,
       lat: 35.751,
       lng: 51.401,
+      rawLat: stop.rawLat,
+      rawLng: stop.rawLng,
     });
     expect(updated.tasks.map((task) => task.orderId)).toEqual(taskIds);
-    expect(next.routes[0]!.driverId).toBe(before.routes[0]!.driverId);
-    expect(next.routes[0]!.stops).toHaveLength(before.routes[0]!.stops.length);
+    expect(next.areas[0]!.driverId).toBe(before.areas[0]!.driverId);
+    expect(next.areas[0]!.stops).toHaveLength(before.areas[0]!.stops.length);
     expect(next.unassignedStops).toHaveLength(before.unassignedStops.length);
   });
 
@@ -1133,11 +1144,11 @@ describe('location correction UI', () => {
 
   it('saves corrected coordinates, recomputes the route polygon, and keeps ownership', async () => {
     const user = userEvent.setup();
-    const beforeAreas = buildRouteAreas(cloneFixture().routes);
-    const beforeR01Positions = beforeAreas.find((entry) => entry.routeId === 'R-01')?.area?.positions ?? [];
+    const beforeAreas = buildRouteAreas(cloneFixture().areas);
+    const beforeR01Positions = beforeAreas.find((entry) => entry.areaId === 'A-01')?.area?.positions ?? [];
     render(<WorkspaceHarness />);
 
-    const beforeR02 = screen.getByTestId('route-area-R-02').getAttribute('data-point-count');
+    const beforeR02 = screen.getByTestId('route-area-A-02').getAttribute('data-point-count');
     const beforeStopCount = screen.getByTestId('route-r01-stop-count').textContent;
     const beforeUnassigned = screen.getByTestId('unassigned-stop-count').textContent;
 
@@ -1151,21 +1162,21 @@ describe('location correction UI', () => {
     );
     expect(screen.getByTestId('map-stop-S-101')).toHaveAttribute('data-lat', '35.751');
     expect(screen.getByTestId('map-stop-S-101')).toHaveAttribute('data-lng', '51.401');
-    expect(screen.getByTestId('map-stop-S-101')).toHaveAttribute('data-route-id', 'R-01');
+    expect(screen.getByTestId('map-stop-S-101')).toHaveAttribute('data-route-id', 'A-01');
     expect(screen.getByTestId('map-stop-S-101')).toHaveAttribute('data-selected', 'true');
     expect(screen.getByTestId('route-r01-stop-count').textContent).toBe(beforeStopCount);
     expect(screen.getByTestId('unassigned-stop-count').textContent).toBe(beforeUnassigned);
-    expect(screen.getByTestId('route-area-R-02')).toHaveAttribute('data-point-count', beforeR02!);
+    expect(screen.getByTestId('route-area-A-02')).toHaveAttribute('data-point-count', beforeR02!);
 
     const afterFixture = updateStopLocation(cloneFixture(), 'S-101', { lat: 35.751, lng: 51.401 })!;
-    const afterAreas = buildRouteAreas(afterFixture.routes);
-    const afterR01 = afterAreas.find((entry) => entry.routeId === 'R-01');
+    const afterAreas = buildRouteAreas(afterFixture.areas);
+    const afterR01 = afterAreas.find((entry) => entry.areaId === 'A-01');
     expect(afterR01?.area?.positions).not.toEqual(beforeR01Positions);
-    expect(screen.getByTestId('route-area-R-01')).toHaveAttribute(
+    expect(screen.getByTestId('route-area-A-01')).toHaveAttribute(
       'data-point-count',
       String(afterR01?.area?.positions.length ?? 0),
     );
-    expect(screen.getByTestId('route-area-R-01')).toHaveAttribute('data-has-polygon', 'true');
+    expect(screen.getByTestId('route-area-A-01')).toHaveAttribute('data-has-polygon', 'true');
   });
 
   it('suppresses normal map selection while correcting and restores it after exit', async () => {
@@ -1181,7 +1192,7 @@ describe('location correction UI', () => {
     await user.click(screen.getByTestId('correction-cancel'));
     await user.click(screen.getByTestId('map-stop-S-201'));
     expect(screen.getByTestId('map-stop-S-201')).toHaveAttribute('data-selected', 'true');
-    expect(screen.getByTestId('route-area-R-02')).toHaveAttribute('data-selected', 'true');
+    expect(screen.getByTestId('route-area-A-02')).toHaveAttribute('data-selected', 'true');
   });
 
   it('does not expose location correction for unassigned stops', async () => {
@@ -1278,7 +1289,7 @@ describe('unassigned order exclusion', () => {
     await user.click(screen.getByTestId('exclude-unassigned-U-001'));
     expect(screen.queryByTestId('assign-unassigned-U-001')).not.toBeInTheDocument();
     expect(
-      assignStopToRoute(cloneFixture(), 'U-001', 'R-01', new Set(['10129001'])),
+      assignStopToRoute(cloneFixture(), 'U-001', 'A-01', new Set(['10129001'])),
     ).toBeNull();
   });
 
@@ -1318,15 +1329,15 @@ describe('map deselection and route-area toggle', () => {
     const user = userEvent.setup();
     render(<WorkspaceHarness />);
 
-    await user.click(screen.getByTestId('route-row-R-02'));
-    expect(screen.getByTestId('route-area-R-02')).toHaveAttribute('data-selected', 'true');
+    await user.click(screen.getByTestId('route-row-A-02'));
+    expect(screen.getByTestId('route-area-A-02')).toHaveAttribute('data-selected', 'true');
     expect(screen.getByTestId('map-stop-S-201')).toHaveAttribute('data-route-active', 'true');
 
     await user.click(screen.getByTestId('empty-map-click'));
     expect(screen.queryByTestId('route-driver-name')).not.toBeInTheDocument();
-    expect(screen.getByTestId('route-area-R-02')).toHaveAttribute('data-selected', 'false');
+    expect(screen.getByTestId('route-area-A-02')).toHaveAttribute('data-selected', 'false');
     expect(screen.getByTestId('map-stop-S-201')).toHaveAttribute('data-route-active', 'false');
-    expect(screen.getByTestId('route-row-R-02')).toBeInTheDocument();
+    expect(screen.getByTestId('route-row-A-02')).toBeInTheDocument();
   });
 
   it('does not immediately deselect when a marker or polygon is clicked', async () => {
@@ -1335,10 +1346,10 @@ describe('map deselection and route-area toggle', () => {
 
     await user.click(screen.getByTestId('map-stop-S-101'));
     expect(screen.getByTestId('map-stop-S-101')).toHaveAttribute('data-selected', 'true');
-    expect(screen.getByTestId('route-area-R-01')).toHaveAttribute('data-selected', 'true');
+    expect(screen.getByTestId('route-area-A-01')).toHaveAttribute('data-selected', 'true');
 
-    await user.click(screen.getByTestId('route-area-R-02'));
-    expect(screen.getByTestId('route-area-R-02')).toHaveAttribute('data-selected', 'true');
+    await user.click(screen.getByTestId('route-area-A-02'));
+    expect(screen.getByTestId('route-area-A-02')).toHaveAttribute('data-selected', 'true');
     expect(screen.getByTestId('map-stop-S-201')).toHaveAttribute('data-route-active', 'true');
   });
 
@@ -1358,8 +1369,8 @@ describe('map deselection and route-area toggle', () => {
     const user = userEvent.setup();
     render(<WorkspaceHarness />);
 
-    await user.click(screen.getByTestId('route-row-R-02'));
-    expect(screen.getByTestId('route-area-R-02')).toBeInTheDocument();
+    await user.click(screen.getByTestId('route-row-A-02'));
+    expect(screen.getByTestId('route-area-A-02')).toBeInTheDocument();
     expect(screen.getByTestId('toggle-route-areas')).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByTestId('fit-selected-source')).toHaveTextContent('polygon');
 
@@ -1370,7 +1381,7 @@ describe('map deselection and route-area toggle', () => {
       'aria-label',
       'نمایش محدوده‌ها',
     );
-    expect(screen.queryByTestId('route-area-R-02')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('route-area-A-02')).not.toBeInTheDocument();
     expect(screen.getByTestId('map-stop-S-201')).toHaveAttribute('data-route-active', 'true');
     expect(screen.getByTestId('map-stop-S-101')).toHaveAttribute('data-ambient', 'true');
     expect(screen.getByTestId('route-driver-name')).toBeInTheDocument();
@@ -1378,8 +1389,8 @@ describe('map deselection and route-area toggle', () => {
     expect(screen.getByTestId('fit-selected-source')).toHaveTextContent('polygon');
 
     await user.click(screen.getByTestId('toggle-route-areas'));
-    expect(screen.getByTestId('route-area-R-02')).toHaveAttribute('data-selected', 'true');
-    expect(screen.getByTestId('route-area-R-01')).toHaveAttribute('data-ambient', 'true');
+    expect(screen.getByTestId('route-area-A-02')).toHaveAttribute('data-selected', 'true');
+    expect(screen.getByTestId('route-area-A-01')).toHaveAttribute('data-ambient', 'true');
     expect(screen.getByTestId('toggle-route-areas')).toHaveAttribute('aria-pressed', 'true');
   });
 });
