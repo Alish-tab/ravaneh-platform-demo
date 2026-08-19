@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 
 import { ExecutionWorkspace } from '@/features/execution/components/ExecutionWorkspace';
 import { useExecutionData } from '@/features/execution/hooks/useExecutionData';
@@ -9,6 +9,9 @@ import '@/features/execution/styles/execution.css';
 
 export function ExecutionPage() {
   const { planId } = useParams<{ planId: string }>();
+  const [searchParams] = useSearchParams();
+  /** Deep-link from A05 global search: ?orderId=<externalId> */
+  const deepLinkOrderId = searchParams.get('orderId') ?? undefined;
   const { plan, status: planStatus, reload: reloadPlan } = usePlan(planId);
   const execution = useExecutionData(planId);
 
@@ -51,6 +54,7 @@ export function ExecutionPage() {
         onRetry={() => void execution.reload()}
         searchOrder={execution.searchOrder}
         saveFollowupNote={execution.saveFollowupNote}
+        initialOrderId={deepLinkOrderId}
       />
     </div>
   );
