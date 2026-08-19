@@ -1,0 +1,567 @@
+/* ── Drivers A06 layout ─────────────────────────────────────────────────────── */
+
+.drv-page {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+.drv-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+  min-inline-size: 0;
+}
+
+/* ── Page header ─────────────────────────────────────────────────────────────── */
+
+.drv-page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-block-end: 16px;
+}
+
+.drv-page-header-text {
+  flex: 1;
+}
+
+.drv-page-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.drv-page-subtitle {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  margin-block-start: 3px;
+}
+
+/* ── Table card ──────────────────────────────────────────────────────────────── */
+
+.drv-table-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.drv-toolbar {
+  padding: 8px 12px;
+  border-block-end: 1px solid var(--border-default);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.drv-search-wrap {
+  flex: 1;
+  max-inline-size: 300px;
+}
+
+.drv-seg-control {
+  display: flex;
+  gap: 0;
+  margin-inline-start: auto;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+  padding: 2px;
+}
+
+.drv-seg-opt {
+  padding: 4px 12px;
+  font-size: 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  border-radius: var(--r-xs);
+  font-family: inherit;
+}
+
+.drv-seg-opt--active {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.drv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.drv-table th {
+  padding: 8px 12px;
+  text-align: start;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-block-end: 1px solid var(--border-default);
+  background: var(--bg-panel);
+  white-space: nowrap;
+}
+
+.drv-table td {
+  padding: 10px 12px;
+  border-block-end: 1px solid var(--border-subtle);
+  vertical-align: middle;
+}
+
+.drv-row {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.drv-row:hover {
+  background: var(--bg-hover);
+}
+
+.drv-row--selected {
+  background: var(--bg-selected);
+}
+
+.drv-driver-name {
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.drv-driver-id {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-block-start: 2px;
+}
+
+.drv-no-assignment {
+  font-size: 12px;
+  color: var(--text-disabled);
+}
+
+.drv-chips-row {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.drv-assignment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 2px 7px;
+  background: rgba(61, 123, 212, 0.1);
+  border: 1px solid rgba(61, 123, 212, 0.22);
+  border-radius: var(--r-xs);
+  color: var(--info-text, #4f8ef7);
+  white-space: nowrap;
+}
+
+.drv-chip-window {
+  font-weight: 600;
+}
+
+.drv-chip-sep {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.drv-chip-extra {
+  font-size: 11px;
+  padding: 2px 6px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-xs);
+  color: var(--text-secondary);
+}
+
+.drv-empty-cell {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 32px 0;
+  font-size: 12.5px;
+}
+
+.drv-table-footer {
+  padding: 6px 12px;
+  border-block-start: 1px solid var(--border-subtle);
+}
+
+.drv-count-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ── Row menu ───────────────────────────────────────────────────────────────── */
+
+.drv-menu-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.drv-menu-trigger {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  color: var(--text-muted);
+  border-radius: var(--r-xs);
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+
+.drv-menu-trigger:hover,
+.drv-menu-trigger--open {
+  background: var(--bg-selected);
+  color: var(--accent);
+}
+
+.drv-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+}
+
+.drv-menu {
+  position: absolute;
+  inset-inline-end: 0;
+  top: 100%;
+  z-index: 40;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+  min-inline-size: 186px;
+  padding: 4px;
+}
+
+.drv-menu-item {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  text-align: start;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--text-primary);
+  border-radius: var(--r-xs);
+  font-family: inherit;
+}
+
+.drv-menu-item:hover {
+  background: var(--bg-hover);
+}
+
+.drv-menu-item--danger {
+  color: var(--error-text);
+}
+
+.drv-menu-sep {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 0;
+}
+
+/* ── Detail drawer ──────────────────────────────────────────────────────────── */
+
+.drv-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
+
+.drv-drawer {
+  position: absolute;
+  inset-inline-end: 0;
+  inset-block-start: 0;
+  inset-block-end: 0;
+  inline-size: 320px;
+  z-index: 25;
+  background: var(--bg-elevated);
+  border-inline-start: 1px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+}
+
+.drv-drawer-header {
+  padding: 12px 16px;
+  border-block-end: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.drv-drawer-header-info {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.drv-drawer-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.drv-drawer-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-block-start: 4px;
+}
+
+.drv-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+}
+
+/* ── Drawer sections ───────────────────────────────────────────────────────── */
+
+.drv-section {
+  margin-block-end: 16px;
+}
+
+.drv-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-block-end: 8px;
+}
+
+.drv-section-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-block-end: 10px;
+}
+
+.drv-kv-row {
+  display: flex;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 12.5px;
+  border-block-end: 1px solid var(--border-subtle);
+}
+
+.drv-kv-row:last-child {
+  border-block-end: none;
+}
+
+.drv-kv-key {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  inline-size: 100px;
+}
+
+.drv-kv-val {
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.drv-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin-block: 14px;
+}
+
+.drv-action-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.drv-status-active {
+  color: var(--success-text, #2b9d6f);
+  font-size: 12px;
+}
+
+.drv-status-inactive {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.drv-meta-sep {
+  color: var(--border-default);
+  font-size: 11px;
+}
+
+.drv-id-label {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.drv-muted-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* ── Assignment cards (drawer) ─────────────────────────────────────────────── */
+
+.drv-assignments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drv-assignment-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+}
+
+.drv-assignment-card-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-block-end: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.drv-assignment-card-plan {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-block-end: 6px;
+}
+
+.drv-view-plan-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 11.5px;
+  padding: 0;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.drv-view-plan-btn:hover {
+  text-decoration: underline;
+}
+
+/* ── Dialogs ────────────────────────────────────────────────────────────────── */
+
+.drv-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drv-dialog {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-xl, var(--shadow-lg));
+  min-inline-size: 360px;
+  max-inline-size: 420px;
+  width: 100%;
+}
+
+.drv-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-block-end: 1px solid var(--border-subtle);
+}
+
+.drv-dialog-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.drv-dialog-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-block-start: 2px;
+}
+
+.drv-dialog-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.drv-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-block-start: 1px solid var(--border-subtle);
+}
+
+.drv-dialog-footer--spread {
+  justify-content: space-between;
+}
+
+.drv-dialog-footer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.drv-dialog-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.75;
+  margin: 0;
+}
+
+.drv-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drv-success-banner {
+  background: rgba(43, 157, 111, 0.07);
+  border: 1px solid rgba(43, 157, 111, 0.2);
+  border-radius: var(--r-sm);
+  padding: 12px 14px;
+  font-size: 12.5px;
+  color: var(--success-text, #2b9d6f);
+  line-height: 1.65;
+}
+
+.drv-icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  border-radius: var(--r-xs);
+  margin-inline-start: auto;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.drv-icon-btn:hover {
+  background: var(--bg-hover);
+}

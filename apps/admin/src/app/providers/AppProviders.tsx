@@ -9,6 +9,8 @@ import { OpsDataProvider } from '@/features/ops/port/OpsDataProvider';
 import type { OpsHomePort } from '@/features/ops/port/ops-port';
 import { PlansFixtureProvider } from '@/features/plans/fixture/PlansFixtureProvider';
 import type { PlansDataPort } from '@/features/plans/fixture/plans-fixture';
+import { DriversDataProvider } from '@/features/drivers/port/DriversDataProvider';
+import type { DriversDataPort } from '@/features/drivers/port/drivers-port';
 
 type AppProvidersProps = {
   children: ReactNode;
@@ -18,9 +20,11 @@ type AppProvidersProps = {
   executionPort?: ExecutionDataPort;
   /** Test injection for A05 ops port. */
   opsPort?: OpsHomePort;
+  /** Test injection for A06 drivers port. */
+  driversPort?: DriversDataPort;
 };
 
-export function AppProviders({ children, plansPort, executionPort, opsPort }: AppProvidersProps) {
+export function AppProviders({ children, plansPort, executionPort, opsPort, driversPort }: AppProvidersProps) {
   const [queryClient] = useState(() => createAppQueryClient());
 
   return (
@@ -28,10 +32,12 @@ export function AppProviders({ children, plansPort, executionPort, opsPort }: Ap
       <PlansFixtureProvider port={plansPort}>
         <ExecutionFixtureProvider port={executionPort}>
           <OpsDataProvider port={opsPort}>
-            {children}
-            {import.meta.env.DEV && import.meta.env.MODE !== 'test' ? (
-              <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
-            ) : null}
+            <DriversDataProvider port={driversPort}>
+              {children}
+              {import.meta.env.DEV && import.meta.env.MODE !== 'test' ? (
+                <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
+              ) : null}
+            </DriversDataProvider>
           </OpsDataProvider>
         </ExecutionFixtureProvider>
       </PlansFixtureProvider>
