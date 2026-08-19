@@ -1,8 +1,9 @@
-import { type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 
 import { ExecutionDataContext } from '@/features/execution/data/execution-data-context';
-import { defaultExecutionFixture } from '@/features/execution/data/fixture-port';
+import { createExecutionFixturePort } from '@/features/execution/data/fixture-port';
 import type { ExecutionDataPort } from '@/features/execution/data/port';
+import { usePlansDataPort } from '@/features/plans/fixture/usePlansFixture';
 
 type ExecutionFixtureProviderProps = {
   children: ReactNode;
@@ -10,6 +11,9 @@ type ExecutionFixtureProviderProps = {
 };
 
 export function ExecutionFixtureProvider({ children, port }: ExecutionFixtureProviderProps) {
-  const value = port ?? defaultExecutionFixture;
+  const plansPort = usePlansDataPort();
+  const value = useMemo(() => {
+    return port ?? createExecutionFixturePort({ plansPort });
+  }, [plansPort, port]);
   return <ExecutionDataContext.Provider value={value}>{children}</ExecutionDataContext.Provider>;
 }

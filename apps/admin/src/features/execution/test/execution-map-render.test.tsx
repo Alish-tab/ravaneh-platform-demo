@@ -6,6 +6,7 @@ import { AppProviders } from '@/app/providers/AppProviders';
 import { appRoutes } from '@/app/router';
 import { createExecutionTestPort } from '@/features/execution/data/fixture-port';
 import { createPlansFixturePort } from '@/features/plans/fixture/plans-fixture';
+import { PLANNING_DRIVERS } from '@/features/planning/fixture/drivers';
 
 vi.mock('@/shared/config/env', () => ({
   env: {
@@ -22,10 +23,30 @@ describe('A04 map render path', () => {
 
   it('mounts a real Leaflet map without the Figma SVG city-grid', async () => {
     const router = createMemoryRouter(appRoutes, {
-      initialEntries: ['/plans/P-2403/execution'],
+      initialEntries: ['/plans/P-2404/execution'],
     });
     const plansPort = createPlansFixturePort({ listDelayMs: 0, mutateDelayMs: 0 });
-    const executionPort = createExecutionTestPort();
+
+    const planId = 'P-2404';
+    await plansPort.generatePlanningAreas(planId, 3);
+    const planFixture = await plansPort.getPlanningState(planId);
+    const areaWithoutDriver = planFixture.areas.find((a) => !a.driverId || !a.driverName);
+    if (areaWithoutDriver) {
+      const missingDriver = PLANNING_DRIVERS.find((d) => d.driverId === 'D-052') ?? PLANNING_DRIVERS[0]!;
+      await plansPort.assignPlanningDriver(planId, areaWithoutDriver.areaId, missingDriver);
+    }
+
+    if (planFixture.unassignedStops.some((s) => s.stopId === 'U-001')) {
+      await plansPort.assignPlanningStop(planId, 'U-001', 'A-01');
+    }
+    if (planFixture.unassignedStops.some((s) => s.stopId === 'U-002')) {
+      await plansPort.assignPlanningStop(planId, 'U-002', 'A-02');
+    }
+
+    await plansPort.recalculatePlanningRoutes(planId);
+    await plansPort.publishPlanning(planId);
+
+    const executionPort = createExecutionTestPort(plansPort);
 
     render(
       <AppProviders plansPort={plansPort} executionPort={executionPort}>

@@ -1,5 +1,6 @@
 import type {
   ExecutionArea,
+  ExecutionStopVisit,
   ExecutionFollowupNote,
   ExecutionLocation,
   ExecutionOrder,
@@ -246,6 +247,41 @@ const LIVE_NOTES: ExecutionFollowupNote[] = [
   },
 ];
 
+function deriveStopVisits(
+  locations: ExecutionLocation[],
+  orders: ExecutionOrder[],
+  phase: ExecutionPhase,
+): ExecutionStopVisit[] {
+  return locations.map((location) => {
+    const locOrders = orders.filter((o) => o.locationId === location.id);
+    const arrivedAtLabel = locOrders[0]?.lastEventLabel ?? '—';
+
+    // Deterministic presentation signals for MVP/tests; not a fraud-proof rule.
+    const deliveredCount = locOrders.filter((o) => o.uiStatus === 'delivered').length;
+    const anyFollowup = locOrders.some((o) => o.uiStatus === 'followup');
+
+    const verificationMethod =
+      phase === 'completed' || deliveredCount > 0
+        ? 'gps-verified'
+        : anyFollowup
+          ? 'manual-verification'
+          : 'manual-verification';
+
+    const distanceFromTarget = Math.round(Math.abs(location.lat - 35.7) * 1000);
+    const gpsAccuracyM = 8 + (location.id.length % 7);
+
+    return {
+      locationId: location.id,
+      arrivedAtLabel: phase === 'not-started' ? '—' : arrivedAtLabel,
+      verificationMethod,
+      distanceFromTarget,
+      gpsAccuracyM,
+      gpsReason: verificationMethod === 'manual-verification' ? 'GPS unavailable' : undefined,
+      driverNote: locOrders[0]?.driverNote,
+    };
+  });
+}
+
 function cloneSnapshot(source: ExecutionSnapshot): ExecutionSnapshot {
   return structuredClone(source);
 }
@@ -261,6 +297,7 @@ function withPhase(source: ExecutionSnapshot, phase: ExecutionPhase): ExecutionS
       attempts: [],
     }));
     next.notes = [];
+    next.stopVisits = [];
   }
   if (phase === 'completed') {
     next.orders = next.orders.map((item) => ({
@@ -274,6 +311,9 @@ function withPhase(source: ExecutionSnapshot, phase: ExecutionPhase): ExecutionS
     }));
   }
   next.phase = derivePhase(next.orders);
+  if (phase !== 'not-started') {
+    next.stopVisits = deriveStopVisits(next.locations, next.orders, phase);
+  }
   return next;
 }
 
@@ -291,10 +331,12 @@ export function createLiveExecutionSnapshot(
     phase: 'in-progress',
     areas: [AREA_1, AREA_2, AREA_3],
     locations: LOCATIONS,
+    stopVisits: [],
     orders: LIVE_ORDERS,
     notes: LIVE_NOTES,
   };
   snapshot.phase = derivePhase(snapshot.orders);
+  snapshot.stopVisits = deriveStopVisits(snapshot.locations, snapshot.orders, snapshot.phase);
   return cloneSnapshot(snapshot);
 }
 
