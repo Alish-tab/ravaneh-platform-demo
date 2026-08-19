@@ -9,14 +9,12 @@ type RoutePolylinesProps = {
   fixture: PlanningPlanFixture;
   geometries: Record<string, RouteGeometryEntry>;
   activeRouteId: string | null;
-  onSelectRoute: (routeId: string) => void;
+  onSelectRoute: (areaId: string) => void;
 };
 
 /**
- * Fixture route paths — OSRM or straight-line fallback.
- *
- * Not rendered in the default Planning map (A03 uses area polygons as the primary visual).
- * Kept for optional future overlays / fit fallbacks via `useRouteGeometries` + `osrm.ts`.
+ * Optional route path overlay from fixture-local straight geometry.
+ * Default Planning map uses Area polygons as the primary visual.
  */
 export function RoutePolylines({
   fixture,
@@ -26,13 +24,13 @@ export function RoutePolylines({
 }: RoutePolylinesProps) {
   return (
     <>
-      {fixture.routes.map((route) => {
-        const entry = geometries[route.routeId];
+      {fixture.areas.map((area) => {
+        const entry = geometries[area.areaId];
         if (!entry || entry.positions.length < 2) return null;
 
-        const isSelected = activeRouteId === route.routeId;
+        const isSelected = activeRouteId === area.areaId;
         const isAmbient = activeRouteId !== null && !isSelected;
-        const hasIssue = route.planState === 'modified';
+        const hasIssue = area.planState === 'modified';
 
         const line = isSelected
           ? ROUTE_LINE_STYLE.selected
@@ -41,12 +39,12 @@ export function RoutePolylines({
             : ROUTE_LINE_STYLE.default;
 
         return (
-          <Fragment key={route.routeId}>
+          <Fragment key={area.areaId}>
             {isSelected ? (
               <Polyline
                 positions={entry.positions}
                 pathOptions={{
-                  color: route.color,
+                  color: area.color,
                   weight: ROUTE_LINE_STYLE.selected.casingWeight,
                   opacity: ROUTE_LINE_STYLE.selected.casingOpacity,
                   lineCap: 'round',
@@ -58,7 +56,7 @@ export function RoutePolylines({
             <Polyline
               positions={entry.positions}
               pathOptions={{
-                color: route.color,
+                color: area.color,
                 weight: line.weight,
                 opacity: line.opacity,
                 dashArray: hasIssue && !isSelected ? '6 6' : undefined,
@@ -66,7 +64,7 @@ export function RoutePolylines({
                 lineJoin: 'round',
               }}
               eventHandlers={{
-                click: () => onSelectRoute(route.routeId),
+                click: () => onSelectRoute(area.areaId),
               }}
             />
           </Fragment>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { shortAddress } from '@/features/planning/fixture/planning-fixture';
-import type { PlanningRoute, PlanningStop } from '@/features/planning/fixture/types';
+import type { PlanningArea, PlanningStop } from '@/features/planning/fixture/types';
 import { routeOrderCount } from '@/features/planning/map/route-waypoints';
 import { Icon, ICONS } from '@/features/plans/components/icons';
 import { Button } from '@/shared/ui';
@@ -9,7 +9,7 @@ import { toPersianDigits } from '@/shared/lib/format';
 
 type UnassignedAreaPickerProps = {
   stop: PlanningStop;
-  routes: PlanningRoute[];
+  routes: PlanningArea[];
   isAssigning: boolean;
   onConfirm: (routeId: string) => void;
   onBack: () => void;
@@ -71,17 +71,17 @@ export function UnassignedAreaPicker({
           </span>
         </div>
         {routes.map((route) => {
-          const selected = selectedRouteId === route.routeId;
+          const selected = selectedRouteId === route.areaId;
           const taskCount = routeOrderCount(route);
           return (
             <button
-              key={route.routeId}
+              key={route.areaId}
               type="button"
               className="planning-route-row flex items-center gap-2"
               aria-selected={selected}
-              data-testid={`area-picker-route-${route.routeId}`}
+              data-testid={`area-picker-route-${route.areaId}`}
               disabled={isAssigning}
-              onClick={() => setSelectedRouteId(route.routeId)}
+              onClick={() => setSelectedRouteId(route.areaId)}
             >
               <span
                 className="planning-area-picker-radio"

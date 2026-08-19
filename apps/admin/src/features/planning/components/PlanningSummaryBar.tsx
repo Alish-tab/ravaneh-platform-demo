@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import {
   countPlanOrders,
   countPlanStops,
@@ -22,6 +23,7 @@ type PlanningSummaryBarProps = {
   targetAreaCount: number;
   onTargetAreaCountChange: (count: number) => void;
   onStartGeneration: () => void;
+  generatedActions?: ReactNode;
 };
 
 export function PlanningSummaryBar({
@@ -31,6 +33,7 @@ export function PlanningSummaryBar({
   targetAreaCount,
   onTargetAreaCountChange,
   onStartGeneration,
+  generatedActions,
 }: PlanningSummaryBarProps) {
   const orderCount = countPlanOrders(fixture);
   const stopCount = countPlanStops(fixture);
@@ -49,17 +52,21 @@ export function PlanningSummaryBar({
             </span>
             <span className="planning-summary-sep" aria-hidden />
             <span className="planning-summary-item">
-              {toPersianDigits(fixture.routes.length)} محدوده
+              {toPersianDigits(fixture.areas.length)} محدوده
             </span>
             <span className="planning-summary-sep" aria-hidden />
             <span className="planning-summary-item planning-summary-item--muted">
               {toPersianDigits(stopCount)} نقطه
             </span>
-            <span className="planning-summary-sep" aria-hidden />
-            <span className="planning-summary-item planning-summary-item--muted">
-              <span className="planning-summary-label">مبدأ: </span>
-              {fixture.depot.name}
-            </span>
+            {fixture.depot ? (
+              <>
+                <span className="planning-summary-sep" aria-hidden />
+                <span className="planning-summary-item planning-summary-item--muted">
+                  <span className="planning-summary-label">مبدأ: </span>
+                  {fixture.depot.name}
+                </span>
+              </>
+            ) : null}
             {remainingUnassigned > 0 ? (
               <>
                 <span className="planning-summary-sep" aria-hidden />
@@ -75,7 +82,7 @@ export function PlanningSummaryBar({
         ) : (
           <>
             <span className="planning-summary-item">
-              {toPersianDigits(orderCount)} سفارش آماده
+              {toPersianDigits(areasGenerated ? orderCount : fixture.eligibleOrderCount || orderCount)} سفارش آماده
             </span>
             <span className="planning-summary-sep" aria-hidden />
             <label className="flex items-center gap-1.5 text-[11.5px] text-[var(--text-muted)]">
@@ -99,11 +106,15 @@ export function PlanningSummaryBar({
                 </span>
               )}
             </label>
-            <span className="planning-summary-sep" aria-hidden />
-            <span className="planning-summary-item planning-summary-item--muted">
-              <span className="planning-summary-label">مبدأ: </span>
-              {fixture.depot.name}
-            </span>
+            {fixture.depot ? (
+              <>
+                <span className="planning-summary-sep" aria-hidden />
+                <span className="planning-summary-item planning-summary-item--muted">
+                  <span className="planning-summary-label">مبدأ: </span>
+                  {fixture.depot.name}
+                </span>
+              </>
+            ) : null}
           </>
         )}
       </div>
@@ -129,6 +140,8 @@ export function PlanningSummaryBar({
             ساخت محدوده‌های توزیع
           </Button>
         ) : null}
+
+        {generatedActions}
 
         {phase === 'failed' ? (
           <>

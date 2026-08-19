@@ -38,6 +38,34 @@ import type {
 import { A01_DEMO_PLANS, FIXTURE_REFERENCE_DATE } from '@/features/plans/fixture/demo-plans';
 import { normalizePlanViewModel, type PlanFixtureSeed } from '@/features/plans/normalize-plan';
 import { toServiceDateSortKey } from '@/features/plans/plan-name';
+import { lookupDispatchOrder } from '@/features/planning/fixture/dispatch-lookup';
+import {
+  assignDriverToRoute as applyAssignDriver,
+  assignStopToRoute as applyAssignStop,
+  generateWorkingAreas,
+  p2404ReviewItemsFromPlanningSeed,
+  planningReadiness,
+  publishWorking,
+  removeDriverFromRoute as applyRemoveDriver,
+  seedPlanningStores,
+  setDriverAssignmentLocked as applyLockDriver,
+  beginRecalculateRoutes,
+  failRecalculateRoutes,
+  recalculateRoutes,
+  moveOrderToRoute as applyMoveOrder,
+  moveStopToRoute as applyMoveStop,
+  removeStopFromRoute as applyRemoveStop,
+  updateStopLocation as applyUpdateStopLocation,
+  type PlanningPlanStore,
+} from '@/features/planning/fixture/planning-store';
+import type {
+  PlanningDispatchResult,
+  PlanningDriver,
+  PlanningPlanFixture,
+  PlanningPublishReadiness,
+  PlanningSystemErrorKind,
+} from '@/features/planning/fixture/types';
+import type { PlanningLatLng } from '@/features/planning/fixture/update-stop-location';
 
 export type PlansListMode = 'ok' | 'loading' | 'error';
 
@@ -93,6 +121,55 @@ export type PlansDataPort = {
   setNextReviewSaveFailure: (fail: boolean) => void;
   setNextReviewConflict: (fail: boolean) => void;
   setNextBulkPartialFailure: (fail: boolean) => void;
+  getPlanningState: (planId: string) => Promise<PlanningPlanFixture>;
+  getPublishedPlanningState: (planId: string) => PlanningPlanFixture | null;
+  generatePlanningAreas: (
+    planId: string,
+    targetCount: number,
+    options?: { leaveUnassigned?: boolean },
+  ) => Promise<PlanningPlanFixture>;
+  rebuildPlanningAreas: (planId: string, targetCount: number) => Promise<PlanningPlanFixture>;
+  recalculatePlanningRoutes: (planId: string) => Promise<PlanningPlanFixture>;
+  assignPlanningDriver: (
+    planId: string,
+    areaId: string,
+    driver: PlanningDriver,
+  ) => Promise<PlanningPlanFixture>;
+  removePlanningDriver: (planId: string, areaId: string) => Promise<PlanningPlanFixture>;
+  lockPlanningDriver: (
+    planId: string,
+    areaId: string,
+    locked: boolean,
+  ) => Promise<PlanningPlanFixture>;
+  assignPlanningStop: (
+    planId: string,
+    stopId: string,
+    areaId: string,
+  ) => Promise<PlanningPlanFixture>;
+  transferPlanningStop: (
+    planId: string,
+    stopId: string,
+    areaId: string,
+  ) => Promise<PlanningPlanFixture>;
+  unassignPlanningStop: (planId: string, stopId: string) => Promise<PlanningPlanFixture>;
+  transferPlanningOrder: (
+    planId: string,
+    orderId: string,
+    areaId: string,
+  ) => Promise<{ fixture: PlanningPlanFixture; destinationStopId: string }>;
+  updatePlanningStopLocation: (
+    planId: string,
+    stopId: string,
+    coords: PlanningLatLng,
+  ) => Promise<PlanningPlanFixture>;
+  getPlanningPublishReadiness: (planId: string) => PlanningPublishReadiness;
+  publishPlanning: (planId: string) => Promise<A01PlanViewModel>;
+  lookupPlanningDispatch: (planId: string, query: string) => PlanningDispatchResult;
+  hasUnpublishedPlanningChanges: (planId: string) => boolean;
+  setPlanningRebuildLock: (planId: string, locked: boolean) => void;
+  setNextPlanningFailure: (kind: PlanningSystemErrorKind) => void;
+  setNextPlanningGenerateFail: (fail: boolean) => void;
+  setNextPlanningUnassigned: (fail: boolean) => void;
   isStale: (id: string) => boolean;
   markStale: (id: string, stale?: boolean) => void;
   setNextCreateFailure: (fail: boolean) => void;
@@ -138,12 +215,24 @@ export function createPlansFixturePort(options?: {
 }): PlansDataPort {
   let plans = clonePlans(options?.seed ?? A01_DEMO_PLANS);
   let reviewStores = seedReviewStores(plans);
+  const p2404Review = reviewStores.get('P-2404');
+  if (p2404Review && p2404Review.working.length === 0) {
+    p2404Review.working = p2404ReviewItemsFromPlanningSeed();
+  }
+  let planningStores = seedPlanningStores(
+    plans,
+    new Map([...reviewStores.entries()].map(([id, store]) => [id, store.working])),
+  );
+  const unpublishedPlanning = new Set<string>();
   let listMode: PlansListMode = 'ok';
   let nextCreateFailure = false;
   let nextApplyFailure = false;
   let nextReviewSaveFailure = false;
   let nextReviewConflict = false;
   let nextBulkPartialFailure = false;
+  let nextPlanningFailure: PlanningSystemErrorKind = null;
+  let nextPlanningGenerateFail = false;
+  let nextPlanningUnassigned = false;
   const staleIds = new Set<string>();
   let idSeq = 2409;
   let batchSeq = 1;
@@ -187,6 +276,116 @@ export function createPlansFixturePort(options?: {
       throw new Error('REVIEW_READONLY');
     }
     return { plan, store: ensureReviewStore(planId) };
+  };
+
+  const ensurePlanningStore = (planId: string): PlanningPlanStore => {
+    const existing = planningStores.get(planId);
+    if (existing) return existing;
+    const plan = requirePlan(planId);
+    const review = ensureReviewStore(planId);
+    const created = seedPlanningStores([plan], new Map([[planId, review.working]])).get(planId)!;
+    planningStores.set(planId, created);
+    return created;
+  };
+
+  const visiblePlanning = (planId: string): PlanningPlanFixture => {
+    const plan = requirePlan(planId);
+    const store = ensurePlanningStore(planId);
+    if (
+      plan.a01Mode === 'published-readonly' ||
+      plan.a01Mode === 'completed-readonly'
+    ) {
+      return structuredClone(store.published ?? store.working);
+    }
+    return structuredClone(store.working);
+  };
+
+  const requireMutablePlanning = (planId: string) => {
+    const plan = requirePlan(planId);
+    if (plan.a01Mode === 'published-readonly' || plan.a01Mode === 'completed-readonly') {
+      throw new Error('PLANNING_READONLY');
+    }
+    if (plan.a01Mode === 'execution-locked' && plan.lifecycle === 'inProgress') {
+      /* mutations other than rebuild may still be restricted by caller */
+    }
+    return { plan, store: ensurePlanningStore(planId) };
+  };
+
+  const guardPlanningMutation = async (opts?: { allowDuringExecution?: boolean }) => {
+    await delay(mutateDelayMs);
+    if (nextPlanningFailure === 'network') {
+      nextPlanningFailure = null;
+      throw new Error('PLANNING_NETWORK');
+    }
+    if (nextPlanningFailure === 'server') {
+      nextPlanningFailure = null;
+      throw new Error('PLANNING_SERVER');
+    }
+    if (nextPlanningFailure === 'conflict') {
+      nextPlanningFailure = null;
+      throw new Error('PLANNING_CONFLICT');
+    }
+    void opts;
+  };
+
+  const markPlanningEdited = (planId: string) => {
+    const store = ensurePlanningStore(planId);
+    if (store.published) unpublishedPlanning.add(planId);
+  };
+
+  const applyUpstreamSpatial = (planId: string, orderId: string, coords?: { lat: number; lng: number }) => {
+    const store = planningStores.get(planId);
+    if (!store || store.working.generationPhase !== 'generated') return;
+    let foundAreaId: string | null = null;
+    for (const area of store.working.areas) {
+      for (const stop of area.stops) {
+        if (stop.tasks.some((task) => task.orderId === orderId || task.taskId === orderId)) {
+          foundAreaId = area.areaId;
+          if (coords) {
+            stop.lat = coords.lat;
+            stop.lng = coords.lng;
+          }
+        }
+      }
+    }
+    const unassigned = store.working.unassignedStops.some((stop) =>
+      stop.tasks.some((task) => task.orderId === orderId || task.taskId === orderId),
+    );
+    if (foundAreaId) {
+      store.working = {
+        ...store.working,
+        upstreamSpatialAttention: true,
+        routes: store.working.routes.map((route) =>
+          route.areaId === foundAreaId ? { ...route, dirty: true, recalcState: 'required' } : route,
+        ),
+      };
+      markPlanningEdited(planId);
+      return;
+    }
+    if (!unassigned && coords) {
+      store.working.unassignedStops = [
+        ...store.working.unassignedStops,
+        {
+          stopId: `U-new-${orderId}`,
+          seq: 0,
+          lat: coords.lat,
+          lng: coords.lng,
+          rawLat: coords.lat,
+          rawLng: coords.lng,
+          tasks: [
+            {
+              taskId: `T-new-${orderId}`,
+              orderId,
+              recipientName: 'سفارش جدید',
+              address: '',
+              phone: '',
+            },
+          ],
+        },
+      ];
+      store.working.eligibleOrderCount += 1;
+      markPlanningEdited(planId);
+    }
   };
 
   const visibleReviewItems = (planId: string): ReviewItem[] => {
@@ -300,6 +499,10 @@ export function createPlansFixturePort(options?: {
       });
       plans = [plan, ...plans];
       reviewStores.set(plan.id, { working: [], published: null });
+      planningStores.set(
+        plan.id,
+        seedPlanningStores([plan], new Map([[plan.id, []]])).get(plan.id)!,
+      );
       emit();
       return structuredClone(plan);
     },
@@ -319,6 +522,8 @@ export function createPlansFixturePort(options?: {
       await delay(mutateDelayMs / 2);
       plans = plans.filter((plan) => plan.id !== id);
       reviewStores.delete(id);
+      planningStores.delete(id);
+      unpublishedPlanning.delete(id);
       emit();
     },
 
@@ -428,6 +633,14 @@ export function createPlansFixturePort(options?: {
       } else if (!current.hasWorkingVersion) {
         store.working = structuredClone(store.published);
       }
+      const planning = ensurePlanningStore(id);
+      if (!planning.published) {
+        if (planning.working.generationPhase === 'generated') {
+          planning.published = structuredClone(planning.working);
+        }
+      } else if (!current.hasWorkingVersion) {
+        planning.working = structuredClone(planning.published);
+      }
       const next = normalizePlanViewModel({
         ...current,
         publishedSnapshot: current.publishedSnapshot ?? publishedSnapshot,
@@ -458,6 +671,7 @@ export function createPlansFixturePort(options?: {
       if (values.name.trim() === REVIEW_FIXTURE_FAILURE_VALUE) {
         throw new Error('REVIEW_SAVE_FAILED');
       }
+      const previous = ensureReviewStore(planId).working.find((item) => item.reviewItemId === reviewItemId);
       const next = mutateWorkingItem(planId, reviewItemId, (item) => {
         const phoneValid = /^09\d{9}$/.test(values.phone.replace(/\D/g, ''));
         const issues = phoneValid ? item.issues.filter((issue) => issue !== 'phone') : item.issues;
@@ -472,6 +686,9 @@ export function createPlansFixturePort(options?: {
           downstreamImpact: values.address !== item.address ? 'planning' : item.downstreamImpact,
         };
       });
+      if (previous && values.address !== previous.address) {
+        applyUpstreamSpatial(planId, next.externalOrderId);
+      }
       emit();
       return next;
     },
@@ -494,6 +711,7 @@ export function createPlansFixturePort(options?: {
           downstreamImpact: 'planning',
         };
       });
+      applyUpstreamSpatial(planId, next.externalOrderId, coords);
       emit();
       return next;
     },
@@ -584,6 +802,218 @@ export function createPlansFixturePort(options?: {
       nextBulkPartialFailure = fail;
     },
 
+    async getPlanningState(planId) {
+      await delay(listDelayMs / 4);
+      return visiblePlanning(planId);
+    },
+
+    getPublishedPlanningState(planId) {
+      const store = planningStores.get(planId);
+      return store?.published ? structuredClone(store.published) : null;
+    },
+
+    async generatePlanningAreas(planId, targetCount, options) {
+      await guardPlanningMutation();
+      const { plan, store } = requireMutablePlanning(planId);
+      const review = ensureReviewStore(planId).working;
+      const next = generateWorkingAreas(store, review, targetCount, {
+        fail: nextPlanningGenerateFail,
+        leaveUnassigned: options?.leaveUnassigned || nextPlanningUnassigned,
+      });
+      nextPlanningGenerateFail = false;
+      nextPlanningUnassigned = false;
+      planningStores.set(planId, next);
+      markPlanningEdited(planId);
+      emit();
+      void plan;
+      return structuredClone(next.working);
+    },
+
+    async rebuildPlanningAreas(planId, targetCount) {
+      const plan = requirePlan(planId);
+      if (plan.a01Mode === 'execution-locked' || plan.lifecycle === 'inProgress') {
+        throw new Error('PLANNING_REBUILD_LOCKED');
+      }
+      await guardPlanningMutation();
+      const { store } = requireMutablePlanning(planId);
+      const review = ensureReviewStore(planId).working;
+      const next = generateWorkingAreas(store, review, targetCount, {
+        fail: nextPlanningGenerateFail,
+      });
+      nextPlanningGenerateFail = false;
+      planningStores.set(planId, next);
+      markPlanningEdited(planId);
+      emit();
+      return structuredClone(next.working);
+    },
+
+    async recalculatePlanningRoutes(planId) {
+      await guardPlanningMutation();
+      const { store } = requireMutablePlanning(planId);
+      store.working = beginRecalculateRoutes(store.working);
+      emit();
+      await delay(mutateDelayMs);
+      if (nextPlanningGenerateFail) {
+        nextPlanningGenerateFail = false;
+        store.working = failRecalculateRoutes(store.working);
+        emit();
+        return structuredClone(store.working);
+      }
+      store.working = recalculateRoutes(store.working);
+      markPlanningEdited(planId);
+      emit();
+      return structuredClone(store.working);
+    },
+
+    async assignPlanningDriver(planId, areaId, driver) {
+      await guardPlanningMutation();
+      const { store } = requireMutablePlanning(planId);
+      const next = applyAssignDriver(store.working, areaId, driver);
+      if (!next) throw new Error('PLANNING_DRIVER_REJECTED');
+      store.working = next;
+      markPlanningEdited(planId);
+      emit();
+      return structuredClone(next);
+    },
+
+    async removePlanningDriver(planId, areaId) {
+      await guardPlanningMutation();
+      const { store } = requireMutablePlanning(planId);
+      const next = applyRemoveDriver(store.working, areaId);
+      if (!next) throw new Error('PLANNING_DRIVER_REJECTED');
+      store.working = next;
+      markPlanningEdited(planId);
+      emit();
+      return structuredClone(next);
+    },
+
+    async lockPlanningDriver(planId, areaId, locked) {
+      const { store } = requireMutablePlanning(planId);
+      const next = applyLockDriver(store.working, areaId, locked);
+      if (!next) throw new Error('PLANNING_LOCK_REJECTED');
+      store.working = next;
+      emit();
+      return structuredClone(next);
+    },
+
+    async assignPlanningStop(planId, stopId, areaId) {
+      await guardPlanningMutation();
+      const { store } = requireMutablePlanning(planId);
+      const next = applyAssignStop(store.working, stopId, areaId);
+      if (!next) throw new Error('PLANNING_ASSIGN_REJECTED');
+      store.working = next;
+      markPlanningEdited(planId);
+      emit();
+      return structuredClone(next);
+    },
+
+    async transferPlanningStop(planId, stopId, areaId) {
+      await guardPlanningMutation();
+      const { store } = requireMutablePlanning(planId);
+      const next = applyMoveStop(store.working, stopId, areaId);
+      if (!next) throw new Error('PLANNING_TRANSFER_REJECTED');
+      store.working = next;
+      markPlanningEdited(planId);
+      emit();
+      return structuredClone(next);
+    },
+
+    async unassignPlanningStop(planId, stopId) {
+      await guardPlanningMutation();
+      const { store } = requireMutablePlanning(planId);
+      const next = applyRemoveStop(store.working, stopId);
+      if (!next) throw new Error('PLANNING_UNASSIGN_REJECTED');
+      store.working = next;
+      markPlanningEdited(planId);
+      emit();
+      return structuredClone(next);
+    },
+
+    async transferPlanningOrder(planId, orderId, areaId) {
+      await guardPlanningMutation();
+      const { store } = requireMutablePlanning(planId);
+      const result = applyMoveOrder(store.working, orderId, areaId);
+      if (!result) throw new Error('PLANNING_ORDER_TRANSFER_REJECTED');
+      store.working = result.fixture;
+      markPlanningEdited(planId);
+      emit();
+      return { fixture: structuredClone(result.fixture), destinationStopId: result.destinationStopId };
+    },
+
+    async updatePlanningStopLocation(planId, stopId, coords) {
+      await guardPlanningMutation();
+      const { store } = requireMutablePlanning(planId);
+      const next = applyUpdateStopLocation(store.working, stopId, coords);
+      if (!next) throw new Error('PLANNING_LOCATION_REJECTED');
+      store.working = next;
+      markPlanningEdited(planId);
+      emit();
+      return structuredClone(next);
+    },
+
+    getPlanningPublishReadiness(planId) {
+      const store = ensurePlanningStore(planId);
+      return planningReadiness(store.working);
+    },
+
+    async publishPlanning(planId) {
+      await guardPlanningMutation();
+      const { plan, store } = requireMutablePlanning(planId);
+      const readiness = planningReadiness(store.working);
+      if (!readiness.canPublish) {
+        throw new Error('PLANNING_PUBLISH_BLOCKED');
+      }
+      const publishedStore = publishWorking(store);
+      planningStores.set(planId, publishedStore);
+      unpublishedPlanning.delete(planId);
+      const review = ensureReviewStore(planId);
+      review.published = structuredClone(review.working);
+      const next = normalizePlanViewModel({
+        ...plan,
+        publishedSnapshot: {
+          itemCount: plan.itemCount,
+          importBatches: plan.importBatches,
+        },
+        lifecycle: plan.lifecycle === 'inProgress' ? plan.lifecycle : 'published',
+        a01Mode: plan.a01Mode === 'execution-locked' ? plan.a01Mode : 'working',
+        hasWorkingVersion: true,
+        canMutateDataset: true,
+        needsAttention: null,
+        isPreparing: false,
+        lastChanged: 'همین الان',
+      });
+      replacePlan(planId, next);
+      emit();
+      return structuredClone(next);
+    },
+
+    lookupPlanningDispatch(planId, query) {
+      const fixture = visiblePlanning(planId);
+      return lookupDispatchOrder(fixture, query);
+    },
+
+    hasUnpublishedPlanningChanges(planId) {
+      return unpublishedPlanning.has(planId);
+    },
+
+    setPlanningRebuildLock(planId, locked) {
+      const store = ensurePlanningStore(planId);
+      store.working.lockAssignmentsOnRebuild = locked;
+      emit();
+    },
+
+    setNextPlanningFailure(kind) {
+      nextPlanningFailure = kind;
+    },
+
+    setNextPlanningGenerateFail(fail) {
+      nextPlanningGenerateFail = fail;
+    },
+
+    setNextPlanningUnassigned(fail) {
+      nextPlanningUnassigned = fail;
+    },
+
     isStale(id) {
       return staleIds.has(id);
     },
@@ -605,12 +1035,24 @@ export function createPlansFixturePort(options?: {
     reset(seed) {
       plans = clonePlans(seed ?? A01_DEMO_PLANS);
       reviewStores = seedReviewStores(plans);
+      const overlay = reviewStores.get('P-2404');
+      if (overlay && overlay.working.length === 0) {
+        overlay.working = p2404ReviewItemsFromPlanningSeed();
+      }
+      planningStores = seedPlanningStores(
+        plans,
+        new Map([...reviewStores.entries()].map(([id, item]) => [id, item.working])),
+      );
+      unpublishedPlanning.clear();
       listMode = 'ok';
       nextCreateFailure = false;
       nextApplyFailure = false;
       nextReviewSaveFailure = false;
       nextReviewConflict = false;
       nextBulkPartialFailure = false;
+      nextPlanningFailure = null;
+      nextPlanningGenerateFail = false;
+      nextPlanningUnassigned = false;
       staleIds.clear();
       idSeq = 2409;
       batchSeq = 1;

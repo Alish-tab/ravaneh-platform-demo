@@ -4,12 +4,12 @@ import {
   buildDriverAreaMap,
   PLANNING_DRIVERS,
 } from '@/features/planning/fixture/drivers';
-import type { PlanningDriver, PlanningRoute } from '@/features/planning/fixture/types';
+import type { PlanningArea, PlanningDriver } from '@/features/planning/fixture/types';
 import { Icon, ICONS } from '@/features/plans/components/icons';
 
 type DriverPickerProps = {
-  route: PlanningRoute;
-  routes: PlanningRoute[];
+  route: PlanningArea;
+  routes: PlanningArea[];
   onSelectDriver: (driver: PlanningDriver) => void;
   onBack: () => void;
 };
@@ -20,8 +20,8 @@ type DriverPickerProps = {
 export function DriverPicker({ route, routes, onSelectDriver, onBack }: DriverPickerProps) {
   const [query, setQuery] = useState('');
   const driverAreaMap = useMemo(
-    () => buildDriverAreaMap(routes, route.routeId),
-    [route.routeId, routes],
+    () => buildDriverAreaMap(routes, route.areaId),
+    [route.areaId, routes],
   );
 
   const filtered = PLANNING_DRIVERS.filter(
@@ -61,7 +61,8 @@ export function DriverPicker({ route, routes, onSelectDriver, onBack }: DriverPi
         {filtered.map((driver) => {
           const isCurrent = driver.driverId === route.driverId;
           const conflictArea = !isCurrent ? driverAreaMap[driver.driverId] : undefined;
-          const isDisabled = isCurrent || !!conflictArea;
+          const planConflict = Boolean(driver.hasPlanConflict);
+          const isDisabled = isCurrent || !!conflictArea || planConflict;
 
           return (
             <button
@@ -70,7 +71,13 @@ export function DriverPicker({ route, routes, onSelectDriver, onBack }: DriverPi
               disabled={isDisabled}
               data-testid={`driver-option-${driver.driverId}`}
               data-driver-status={
-                isCurrent ? 'current' : conflictArea ? 'assigned' : 'available'
+                isCurrent
+                  ? 'current'
+                  : planConflict
+                    ? 'plan-conflict'
+                    : conflictArea
+                      ? 'assigned'
+                      : 'available'
               }
               className="planning-driver-option"
               onClick={() => {
@@ -96,16 +103,18 @@ export function DriverPicker({ route, routes, onSelectDriver, onBack }: DriverPi
                     'mt-0.5 text-[10px]',
                     isCurrent
                       ? 'text-[var(--accent-text)]'
-                      : conflictArea
+                      : planConflict || conflictArea
                         ? 'text-[var(--warning-text)]'
                         : 'text-[var(--success-text)]',
                   ].join(' ')}
                 >
                   {isCurrent
                     ? 'راننده فعلی این محدوده'
-                    : conflictArea
-                      ? `تخصیص‌یافته به ${conflictArea}`
-                      : 'آماده تخصیص'}
+                    : planConflict
+                      ? driver.conflictReason ?? 'تداخل با برنامه دیگر — ابتدا از آن برنامه بردارید'
+                      : conflictArea
+                        ? `تخصیص‌یافته به ${conflictArea} — ابتدا بردارید`
+                        : 'آماده تخصیص'}
                 </div>
               </div>
               {!isDisabled ? (

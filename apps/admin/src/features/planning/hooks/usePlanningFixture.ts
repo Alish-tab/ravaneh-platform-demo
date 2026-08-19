@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { assignStopToRoute as applyAssignStopToRoute } from '@/features/planning/fixture/assign-stop';
 import {
@@ -26,7 +26,10 @@ export function usePlanningFixture(initial: PlanningPlanFixture) {
   const [isPending, setIsPending] = useState(false);
   const pendingRef = useRef(false);
   const fixtureRef = useRef(fixture);
-  fixtureRef.current = fixture;
+
+  useEffect(() => {
+    fixtureRef.current = fixture;
+  }, [fixture]);
 
   const runMutation = useCallback(
     async (
@@ -126,8 +129,14 @@ export function usePlanningFixture(initial: PlanningPlanFixture) {
     return true;
   }, []);
 
+  const replaceFixture = useCallback((next: PlanningPlanFixture) => {
+    fixtureRef.current = next;
+    setFixture(next);
+  }, []);
+
   return {
     fixture,
+    replaceFixture,
     isPending,
     /** @deprecated alias — prefer isPending */
     isAssigning: isPending,

@@ -12,22 +12,22 @@ export const ROUTE_AREA_STYLE = {
 
 type RoutePolygonsProps = {
   areas: RouteAreaEntry[];
-  activeRouteId: string | null;
-  onSelectRoute: (routeId: string) => void;
+  activeAreaId: string | null;
+  onSelectRoute: (areaId: string) => void;
 };
 
 /**
- * Colored geographic delivery areas for each fixture route.
- * Layer order: render under stop markers (markers use markerPane).
+ * Colored geographic delivery areas for each Planning Area.
+ * Visualization only — not membership.
  */
-export function RoutePolygons({ areas, activeRouteId, onSelectRoute }: RoutePolygonsProps) {
+export function RoutePolygons({ areas, activeAreaId, onSelectRoute }: RoutePolygonsProps) {
   return (
     <>
       {areas.map((entry) => {
         if (!entry.area || entry.area.positions.length < 3) return null;
 
-        const isSelected = activeRouteId === entry.routeId;
-        const isAmbient = activeRouteId !== null && !isSelected;
+        const isSelected = activeAreaId === entry.areaId;
+        const isAmbient = activeAreaId !== null && !isSelected;
         const style = isSelected
           ? ROUTE_AREA_STYLE.selected
           : isAmbient
@@ -37,7 +37,7 @@ export function RoutePolygons({ areas, activeRouteId, onSelectRoute }: RoutePoly
 
         return (
           <Polygon
-            key={entry.routeId}
+            key={entry.areaId}
             positions={entry.area.positions}
             pathOptions={{
               color: entry.color,
@@ -50,7 +50,7 @@ export function RoutePolygons({ areas, activeRouteId, onSelectRoute }: RoutePoly
             eventHandlers={{
               click: (event) => {
                 stopMapClickPropagation(event);
-                onSelectRoute(entry.routeId);
+                onSelectRoute(entry.areaId);
               },
             }}
           />

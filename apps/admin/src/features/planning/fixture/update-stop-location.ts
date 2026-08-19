@@ -1,4 +1,5 @@
 import type { PlanningPlanFixture, PlanningStop } from '@/features/planning/fixture/types';
+import { markRoutesDirty } from '@/features/planning/planning-model';
 
 export type PlanningLatLng = { lat: number; lng: number };
 
@@ -13,13 +14,19 @@ export function isValidPlanningLatLng(coords: PlanningLatLng): boolean {
   );
 }
 
-function updateStopCoords(stop: PlanningStop, coords: PlanningLatLng): PlanningStop {
-  return { ...stop, lat: coords.lat, lng: coords.lng };
+function updateOperational(stop: PlanningStop, coords: PlanningLatLng): PlanningStop {
+  return {
+    ...stop,
+    lat: coords.lat,
+    lng: coords.lng,
+    rawLat: stop.rawLat,
+    rawLng: stop.rawLng,
+  };
 }
 
 /**
- * Commit corrected coordinates for a routed or unassigned stop.
- * Preserves ownership, tasks, sequence, and unrelated fields.
+ * Commit corrected operational coordinates.
+ * Raw imported coordinates are never overwritten.
  */
 export function updateStopLocation(
   fixture: PlanningPlanFixture,
@@ -28,21 +35,26 @@ export function updateStopLocation(
 ): PlanningPlanFixture | null {
   if (!isValidPlanningLatLng(coords)) return null;
 
-  for (let routeIndex = 0; routeIndex < fixture.routes.length; routeIndex += 1) {
-    const route = fixture.routes[routeIndex]!;
-    const stopIndex = route.stops.findIndex((stop) => stop.stopId === stopId);
+  for (let areaIndex = 0; areaIndex < fixture.areas.length; areaIndex += 1) {
+    const area = fixture.areas[areaIndex]!;
+    const stopIndex = area.stops.findIndex((stop) => stop.stopId === stopId);
     if (stopIndex < 0) continue;
 
-    const nextRoutes = fixture.routes.map((item, index) => {
-      if (index !== routeIndex) return item;
+    const areas = fixture.areas.map((item, index) => {
+      if (index !== areaIndex) return item;
       return {
         ...item,
         stops: item.stops.map((stop, i) =>
-          i === stopIndex ? updateStopCoords(stop, coords) : stop,
+          i === stopIndex ? updateOperational(stop, coords) : stop,
         ),
       };
     });
-    return { ...fixture, routes: nextRoutes };
+
+    return markRoutesDirty(
+      { ...fixture, areas },
+      [area.areaId],
+      ['location-corrected'],
+    );
   }
 
   const unassignedIndex = fixture.unassignedStops.findIndex((stop) => stop.stopId === stopId);
@@ -51,7 +63,12 @@ export function updateStopLocation(
   return {
     ...fixture,
     unassignedStops: fixture.unassignedStops.map((stop, index) =>
-      index === unassignedIndex ? updateStopCoords(stop, coords) : stop,
+      index === unassignedIndex ? updateOperational(stop, coords) : stop,
     ),
+    lastMutationImpact: {
+      affectedAreaIds: [],
+      dirtyRouteIds: [],
+      planningAttention: ['location-corrected'],
+    },
   };
 }

@@ -1,249 +1,167 @@
-import type { PlanningPlanFixture, PlanningRoute, PlanningStop } from '@/features/planning/fixture/types';
+import type {
+  PlanningArea,
+  PlanningDeliveryTask,
+  PlanningPlanFixture,
+  PlanningRoute,
+  PlanningStop,
+} from '@/features/planning/fixture/types';
+import { findRouteForArea, syncAreaMembership } from '@/features/planning/planning-model';
 
 /**
- * Compact Planning map fixture — designer-parity marker/panel states without full A03 volume.
+ * Compact Planning map fixture — designer-parity marker/panel states without Figma volume.
  * Seed defaults match demo plan P-2404 labels; factory clones per planId.
  */
 export const PLANNING_FIXTURE_PLAN_ID = 'P-2404';
+
+function task(
+  taskId: string,
+  orderId: string,
+  recipientName: string,
+  address: string,
+  phone: string,
+): PlanningDeliveryTask {
+  return { taskId, orderId, recipientName, address, phone };
+}
+
+function stop(
+  stopId: string,
+  seq: number,
+  lat: number,
+  lng: number,
+  tasks: PlanningDeliveryTask[],
+  raw: { lat: number; lng: number } = { lat, lng },
+): PlanningStop {
+  return { stopId, seq, lat, lng, rawLat: raw.lat, rawLng: raw.lng, tasks };
+}
+
+function area(partial: Omit<PlanningArea, 'memberStopIds'> & { memberStopIds?: string[] }): PlanningArea {
+  return syncAreaMembership({
+    ...partial,
+    memberStopIds: partial.memberStopIds ?? partial.stops.map((item) => item.stopId),
+  });
+}
+
+function routeFor(areaItem: PlanningArea, extra: Partial<PlanningRoute> = {}): PlanningRoute {
+  return {
+    routeId: extra.routeId ?? areaItem.areaId.replace(/^A-/, 'RT-'),
+    areaId: areaItem.areaId,
+    orderedStopIds: extra.orderedStopIds ?? areaItem.stops.map((item) => item.stopId),
+    dirty: extra.dirty ?? false,
+    recalcState: extra.recalcState ?? 'idle',
+    distanceKm: extra.distanceKm ?? 30,
+    durationMin: extra.durationMin ?? 80,
+  };
+}
+
+const AREA_1 = area({
+  areaId: 'A-01',
+  label: 'محدوده ۱',
+  color: '#7a8fd0',
+  driverId: 'D-041',
+  driverName: 'کاوه میرزایی',
+  driverAssignmentLocked: false,
+  planState: 'assigned',
+  stops: [
+    stop('S-101', 1, 35.747, 51.362, [
+      task('T-1001', '10123456', 'علی احمدی', 'میرداماد، بلوار کلانتری، پلاک ۱۲', '0912-111-0101'),
+    ]),
+    stop('S-102', 2, 35.74, 51.38, [
+      task('T-1002a', '10123457', 'سارا موسوی', 'میرداماد، کوچه نهم، واحد ۳', '0912-222-0202'),
+      task('T-1002b', '10123458', 'رضا نجفی', 'میرداماد، کوچه نهم، واحد ۷', '0912-333-0303'),
+    ]),
+    stop('S-103', 3, 35.734, 51.368, [
+      task('T-1003', '10123891', 'محمد رضایی', 'داروس، خیابان اصلی، پلاک ۸', '0912-444-0404'),
+    ]),
+    stop('S-104', 4, 35.728, 51.396, [
+      task('T-1004', '10124002', 'فاطمه کریمی', 'اقدسیه، بلوار اصلی، پلاک ۴', '0912-555-0505'),
+    ]),
+  ],
+});
+
+const AREA_2 = area({
+  areaId: 'A-02',
+  label: 'محدوده ۲',
+  color: '#9a78a8',
+  driverId: 'D-038',
+  driverName: 'سعید ابراهیمی',
+  driverAssignmentLocked: false,
+  planState: 'modified',
+  stops: [
+    stop('S-201', 1, 35.692, 51.426, [
+      task('T-2001', '10125001', 'ندا قاسمی', 'پاسداران، بلوار اول، پلاک ۶', '0912-666-0606'),
+    ]),
+    stop('S-202', 2, 35.686, 51.441, [
+      task('T-2002', '10125002', 'حسن طاهری', 'پاسداران، خیابان ششم، پلاک ۲', '0912-777-0707'),
+    ]),
+    stop('S-203', 3, 35.675, 51.457, [
+      task('T-2003', '10125003', 'شیرین جعفری', 'شریعتی، کوچه پنجم، پلاک ۹', '0912-888-0808'),
+    ]),
+  ],
+});
+
+const AREA_3 = area({
+  areaId: 'A-03',
+  label: 'محدوده ۳',
+  color: '#5e8ab8',
+  driverId: null,
+  driverName: null,
+  driverAssignmentLocked: false,
+  planState: 'draft',
+  stops: [
+    stop('S-301', 1, 35.68, 51.366, [
+      task('T-3001', '10126001', 'رامین وزیری', 'سعادت‌آباد، میدان کاج، پلاک ۵', '0912-999-0909'),
+    ]),
+    stop('S-302', 2, 35.674, 51.38, [
+      task('T-3002', '10126002', 'آزاده صمدی', 'سعادت‌آباد، بلوار ایران، پلاک ۱۱', '0935-111-1010'),
+    ]),
+    stop('S-303', 3, 35.662, 51.395, [
+      task('T-3003', '10126003', 'داوود منصوری', 'ونک، خیابان برزیل، پلاک ۳', '0935-222-1111'),
+    ]),
+  ],
+});
+
+const UNASSIGNED: PlanningStop[] = [
+  stop('U-001', 0, 35.709, 51.452, [
+    task('TU-001', '10129001', 'بیژن کاظمی', 'قیطریه، بلوار اصلی، پلاک ۳', '0935-333-1212'),
+  ]),
+  stop('U-002', 0, 35.682, 51.373, [
+    task('TU-002', '10129102', 'گلنار عباسی', 'سعادت‌آباد، خیابان ۱۵، واحد ۲', '0935-444-1313'),
+    task('TU-003', '10129103', 'فریدون حمیدی', 'سعادت‌آباد، خیابان ۱۵، واحد ۶', '0935-555-1414'),
+  ]),
+];
 
 const PLANNING_FIXTURE_SEED: PlanningPlanFixture = {
   planId: PLANNING_FIXTURE_PLAN_ID,
   planName: 'برنامه تحویل — ۱۴ مرداد — ۱۵ تا ۱۸',
   depot: { name: 'مرکز توزیع تهران', lat: 35.695, lng: 51.389 },
+  areas: [AREA_1, AREA_2, AREA_3],
   routes: [
-    {
-      routeId: 'R-01',
-      routeNum: 1,
-      label: 'محدوده ۱',
-      color: '#7a8fd0',
-      driverId: 'D-041',
-      driverName: 'کاوه میرزایی',
-      driverAssignmentLocked: false,
-      distanceKm: 38,
-      durationMin: 95,
-      planState: 'assigned',
-      stops: [
-        {
-          stopId: 'S-101',
-          seq: 1,
-          lat: 35.747,
-          lng: 51.362,
-          tasks: [
-            {
-              taskId: 'T-1001',
-              orderId: '10123456',
-              recipientName: 'علی احمدی',
-              address: 'میرداماد، بلوار کلانتری، پلاک ۱۲',
-            },
-          ],
-        },
-        {
-          stopId: 'S-102',
-          seq: 2,
-          lat: 35.74,
-          lng: 51.38,
-          tasks: [
-            {
-              taskId: 'T-1002a',
-              orderId: '10123457',
-              recipientName: 'سارا موسوی',
-              address: 'میرداماد، کوچه نهم، واحد ۳',
-            },
-            {
-              taskId: 'T-1002b',
-              orderId: '10123458',
-              recipientName: 'رضا نجفی',
-              address: 'میرداماد، کوچه نهم، واحد ۷',
-            },
-          ],
-        },
-        {
-          stopId: 'S-103',
-          seq: 3,
-          lat: 35.734,
-          lng: 51.368,
-          tasks: [
-            {
-              taskId: 'T-1003',
-              orderId: '10123891',
-              recipientName: 'محمد رضایی',
-              address: 'داروس، خیابان اصلی، پلاک ۸',
-            },
-          ],
-        },
-        {
-          stopId: 'S-104',
-          seq: 4,
-          lat: 35.728,
-          lng: 51.396,
-          tasks: [
-            {
-              taskId: 'T-1004',
-              orderId: '10124002',
-              recipientName: 'فاطمه کریمی',
-              address: 'اقدسیه، بلوار اصلی، پلاک ۴',
-            },
-          ],
-        },
-      ],
-    },
-    {
-      routeId: 'R-02',
-      routeNum: 2,
-      label: 'محدوده ۲',
-      color: '#9a78a8',
-      driverId: 'D-038',
-      driverName: 'سعید ابراهیمی',
-      driverAssignmentLocked: false,
+    routeFor(AREA_1, { routeId: 'RT-01', distanceKm: 38, durationMin: 95 }),
+    routeFor(AREA_2, {
+      routeId: 'RT-02',
       distanceKm: 44,
       durationMin: 112,
-      planState: 'modified',
-      stops: [
-        {
-          stopId: 'S-201',
-          seq: 1,
-          lat: 35.692,
-          lng: 51.426,
-          tasks: [
-            {
-              taskId: 'T-2001',
-              orderId: '10125001',
-              recipientName: 'ندا قاسمی',
-              address: 'پاسداران، بلوار اول، پلاک ۶',
-            },
-          ],
-        },
-        {
-          stopId: 'S-202',
-          seq: 2,
-          lat: 35.686,
-          lng: 51.441,
-          tasks: [
-            {
-              taskId: 'T-2002',
-              orderId: '10125002',
-              recipientName: 'حسن طاهری',
-              address: 'پاسداران، خیابان ششم، پلاک ۲',
-            },
-          ],
-        },
-        {
-          stopId: 'S-203',
-          seq: 3,
-          lat: 35.675,
-          lng: 51.457,
-          tasks: [
-            {
-              taskId: 'T-2003',
-              orderId: '10125003',
-              recipientName: 'شیرین جعفری',
-              address: 'شریعتی، کوچه پنجم، پلاک ۹',
-            },
-          ],
-        },
-      ],
-    },
-    {
-      routeId: 'R-03',
-      routeNum: 3,
-      label: 'محدوده ۳',
-      color: '#5e8ab8',
-      driverId: null,
-      driverName: null,
-      driverAssignmentLocked: false,
-      distanceKm: 28,
-      durationMin: 74,
-      planState: 'draft',
-      stops: [
-        {
-          stopId: 'S-301',
-          seq: 1,
-          lat: 35.68,
-          lng: 51.366,
-          tasks: [
-            {
-              taskId: 'T-3001',
-              orderId: '10126001',
-              recipientName: 'رامین وزیری',
-              address: 'سعادت‌آباد، میدان کاج، پلاک ۵',
-            },
-          ],
-        },
-        {
-          stopId: 'S-302',
-          seq: 2,
-          lat: 35.674,
-          lng: 51.38,
-          tasks: [
-            {
-              taskId: 'T-3002',
-              orderId: '10126002',
-              recipientName: 'آزاده صمدی',
-              address: 'سعادت‌آباد، بلوار ایران، پلاک ۱۱',
-            },
-          ],
-        },
-        {
-          stopId: 'S-303',
-          seq: 3,
-          lat: 35.662,
-          lng: 51.395,
-          tasks: [
-            {
-              taskId: 'T-3003',
-              orderId: '10126003',
-              recipientName: 'داوود منصوری',
-              address: 'ونک، خیابان برزیل، پلاک ۳',
-            },
-          ],
-        },
-      ],
-    },
+      dirty: true,
+      recalcState: 'required',
+    }),
+    routeFor(AREA_3, { routeId: 'RT-03', distanceKm: 28, durationMin: 74 }),
   ],
-  unassignedStops: [
-    {
-      stopId: 'U-001',
-      seq: 0,
-      lat: 35.709,
-      lng: 51.452,
-      tasks: [
-        {
-          taskId: 'TU-001',
-          orderId: '10129001',
-          recipientName: 'بیژن کاظمی',
-          address: 'قیطریه، بلوار اصلی، پلاک ۳',
-        },
-      ],
-    },
-    {
-      stopId: 'U-002',
-      seq: 0,
-      lat: 35.682,
-      lng: 51.373,
-      tasks: [
-        {
-          taskId: 'TU-002',
-          orderId: '10129102',
-          recipientName: 'گلنار عباسی',
-          address: 'سعادت‌آباد، خیابان ۱۵، واحد ۲',
-        },
-        {
-          taskId: 'TU-003',
-          orderId: '10129103',
-          recipientName: 'فریدون حمیدی',
-          address: 'سعادت‌آباد، خیابان ۱۵، واحد ۶',
-        },
-      ],
-    },
-  ],
+  unassignedStops: UNASSIGNED,
+  generationPhase: 'generated',
+  targetAreaCount: 3,
+  lockAssignmentsOnRebuild: false,
+  reviewBlockerCount: 0,
+  eligibleOrderCount: 14,
+  upstreamSpatialAttention: false,
 };
 
 export type CreatePlanningFixtureOptions = {
   planName?: string;
+  generationPhase?: PlanningPlanFixture['generationPhase'];
 };
 
 /**
- * Build an independent Planning map/panel fixture for a plan id (frontend-only).
+ * Build an independent Planning map/panel fixture for tests and canned generation.
  * Always returns a deep clone — never shares mutable state across plans.
  */
 export function createPlanningFixture(
@@ -255,12 +173,15 @@ export function createPlanningFixture(
   if (options?.planName) {
     fixture.planName = options.planName;
   }
+  if (options?.generationPhase) {
+    fixture.generationPhase = options.generationPhase;
+  }
   return fixture;
 }
 
 /**
- * Resolve Planning fixture for a plan-scoped workspace.
- * Frontend-only: any plan that reaches PlanningPage gets deterministic demo map data.
+ * @deprecated Independent universe. Prefer PlansDataPort.getPlanningState.
+ * Kept for isolated workspace tests that pass initialFixture.
  */
 export function getPlanningFixture(
   planId: string,
@@ -276,13 +197,19 @@ export const PLANNING_PLAN_FIXTURE: PlanningPlanFixture =
 export function findStopInPlan(
   fixture: PlanningPlanFixture,
   stopId: string,
-): { route: PlanningRoute | null; stop: PlanningStop } | null {
-  for (const route of fixture.routes) {
-    const stop = route.stops.find((item) => item.stopId === stopId);
-    if (stop) return { route, stop };
+): { area: PlanningArea | null; route: PlanningRoute | null; stop: PlanningStop } | null {
+  for (const areaItem of fixture.areas) {
+    const found = areaItem.stops.find((item) => item.stopId === stopId);
+    if (found) {
+      return {
+        area: areaItem,
+        route: findRouteForArea(fixture, areaItem.areaId),
+        stop: found,
+      };
+    }
   }
   const unassigned = fixture.unassignedStops.find((item) => item.stopId === stopId);
-  if (unassigned) return { route: null, stop: unassigned };
+  if (unassigned) return { area: null, route: null, stop: unassigned };
   return null;
 }
 
@@ -291,31 +218,38 @@ export function shortAddress(address: string): string {
 }
 
 export function countPlanOrders(fixture: PlanningPlanFixture): number {
-  const assigned = fixture.routes.reduce(
-    (sum, route) => sum + route.stops.reduce((inner, stop) => inner + stop.tasks.length, 0),
+  const assigned = fixture.areas.reduce(
+    (sum, areaItem) => sum + areaItem.stops.reduce((inner, item) => inner + item.tasks.length, 0),
     0,
   );
-  const unassigned = fixture.unassignedStops.reduce((sum, stop) => sum + stop.tasks.length, 0);
+  const unassigned = fixture.unassignedStops.reduce((sum, item) => sum + item.tasks.length, 0);
   return assigned + unassigned;
 }
 
 export function countPlanStops(fixture: PlanningPlanFixture): number {
-  return (
-    fixture.routes.reduce((sum, route) => sum + route.stops.length, 0) +
-    fixture.unassignedStops.length
-  );
+  return fixture.areas.reduce((sum, areaItem) => sum + areaItem.stops.length, 0) + fixture.unassignedStops.length;
 }
 
 export function allStopPositions(fixture: PlanningPlanFixture): [number, number][] {
   const points: [number, number][] = [];
-  for (const route of fixture.routes) {
-    for (const stop of route.stops) {
-      points.push([stop.lat, stop.lng]);
+  for (const areaItem of fixture.areas) {
+    for (const item of areaItem.stops) {
+      points.push([item.lat, item.lng]);
     }
   }
-  for (const stop of fixture.unassignedStops) {
-    points.push([stop.lat, stop.lng]);
+  for (const item of fixture.unassignedStops) {
+    points.push([item.lat, item.lng]);
   }
-  points.push([fixture.depot.lat, fixture.depot.lng]);
+  if (fixture.depot) {
+    points.push([fixture.depot.lat, fixture.depot.lng]);
+  }
   return points;
 }
+
+/** Explicit Physical Stop grouping for P-2404 Working dataset (not coordinate merge in UI). */
+export const P2404_PHYSICAL_STOP_GROUPS: string[][] = [
+  ['10123457', '10123458'],
+  ['10129102', '10129103'],
+];
+
+export const P2405_PHYSICAL_STOP_GROUPS: string[][] = [['D-1042', 'D-1045']];

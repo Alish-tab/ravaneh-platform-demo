@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { shortAddress } from '@/features/planning/fixture/planning-fixture';
-import type { PlanningRoute, PlanningStop } from '@/features/planning/fixture/types';
+import type { PlanningArea, PlanningStop } from '@/features/planning/fixture/types';
 import { routeOrderCount } from '@/features/planning/map/route-waypoints';
 import { Icon, ICONS } from '@/features/plans/components/icons';
 import { Button } from '@/shared/ui';
@@ -12,7 +12,7 @@ export const TRANSFER_UNASSIGNED = '__unassigned__';
 
 type AreaTransferPickerProps = {
   stop: PlanningStop;
-  routes: PlanningRoute[];
+  routes: PlanningArea[];
   currentRouteId: string;
   scopeLabel: string;
   /** Whole-stop transfers may return to unassigned; order transfers may not. */
@@ -39,7 +39,7 @@ export function AreaTransferPicker({
 }: AreaTransferPickerProps) {
   const [selectedDestinationId, setSelectedDestinationId] = useState<string | null>(null);
   const primary = stop.tasks[0];
-  const available = routes.filter((route) => route.routeId !== currentRouteId);
+  const available = routes.filter((route) => route.areaId !== currentRouteId);
   const destinationCount = available.length + (allowUnassigned ? 1 : 0);
 
   const handleConfirm = () => {
@@ -90,17 +90,17 @@ export function AreaTransferPicker({
         </div>
 
         {available.map((route) => {
-          const selected = selectedDestinationId === route.routeId;
+          const selected = selectedDestinationId === route.areaId;
           const taskCount = routeOrderCount(route);
           return (
             <button
-              key={route.routeId}
+              key={route.areaId}
               type="button"
               className="planning-route-row flex items-center gap-2"
               aria-selected={selected}
-              data-testid={`transfer-dest-route-${route.routeId}`}
+              data-testid={`transfer-dest-route-${route.areaId}`}
               disabled={isTransferring}
-              onClick={() => setSelectedDestinationId(route.routeId)}
+              onClick={() => setSelectedDestinationId(route.areaId)}
             >
               <span
                 className="planning-area-picker-radio"

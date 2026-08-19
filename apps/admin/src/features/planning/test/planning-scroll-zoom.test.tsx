@@ -77,7 +77,7 @@ describe('PlanningMap scroll-wheel zoom', () => {
     render(
       <PlanningMap
         fixture={PLANNING_PLAN_FIXTURE}
-        areas={buildRouteAreas(PLANNING_PLAN_FIXTURE.routes)}
+        areas={buildRouteAreas(PLANNING_PLAN_FIXTURE.areas)}
         areasGenerated
         showRouteAreas
         activeRouteId={null}

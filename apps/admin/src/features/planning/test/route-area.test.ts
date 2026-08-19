@@ -48,10 +48,11 @@ describe('deriveRouteArea', () => {
   });
 
   it('builds area entries for fixture routes without throwing', () => {
-    const entries = buildRouteAreas(PLANNING_PLAN_FIXTURE.routes);
+    const entries = buildRouteAreas(PLANNING_PLAN_FIXTURE.areas);
     expect(entries).toHaveLength(3);
     for (const entry of entries) {
-      expect(entry.routeId).toMatch(/^R-0/);
+      expect(entry.areaId).toMatch(/^A-0/);
+      expect(entry.areaId).not.toBe(PLANNING_PLAN_FIXTURE.routes.find((route) => route.areaId === entry.areaId)?.routeId);
       if (entry.area) {
         expect(entry.area.positions.length).toBeGreaterThanOrEqual(4);
       }

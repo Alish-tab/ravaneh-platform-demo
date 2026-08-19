@@ -24,7 +24,12 @@ export const PLANNING_DRIVERS: PlanningDriver[] = [
   { driverId: 'D-017', driverName: 'بهروز اکبری' },
   { driverId: 'D-018', driverName: 'وحید مرادی' },
   { driverId: 'D-019', driverName: 'حمید توکلی' },
-  { driverId: 'D-020', driverName: 'مصطفی رحیمی' },
+  {
+    driverId: 'D-020',
+    driverName: 'مصطفی رحیمی',
+    hasPlanConflict: true,
+    conflictReason: 'تداخل با برنامه دیگر — ابتدا از آن برنامه بردارید',
+  },
 ];
 
 export function findPlanningDriver(
@@ -34,21 +39,21 @@ export function findPlanningDriver(
   return drivers.find((driver) => driver.driverId === driverId) ?? null;
 }
 
-/** Map of driverId → area label for routes other than `excludeRouteId`. */
+/** Map of driverId → area label for areas other than `excludeAreaId`. */
 export function buildDriverAreaMap(
-  routes: Array<{ routeId: string; label: string; driverId: string | null }>,
-  excludeRouteId: string,
+  areas: Array<{ areaId: string; label: string; driverId: string | null }>,
+  excludeAreaId: string,
 ): Record<string, string> {
   const map: Record<string, string> = {};
-  for (const route of routes) {
-    if (route.routeId === excludeRouteId || !route.driverId) continue;
-    map[route.driverId] = route.label;
+  for (const area of areas) {
+    if (area.areaId === excludeAreaId || !area.driverId) continue;
+    map[area.driverId] = area.label;
   }
   return map;
 }
 
 export function countRoutesWithoutDriver(
-  routes: Array<{ driverId: string | null }>,
+  areas: Array<{ driverId: string | null }>,
 ): number {
-  return routes.filter((route) => route.driverId === null).length;
+  return areas.filter((area) => area.driverId === null).length;
 }

@@ -694,3 +694,76 @@
   color: var(--text-primary);
   box-shadow: var(--shadow-sm);
 }
+
+.planning-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.planning-banner--warn {
+  color: var(--warning-text);
+  background: rgba(201, 144, 53, 0.08);
+}
+
+.planning-dispatch-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+  direction: ltr;
+  text-align: start;
+}
+
+.planning-dispatch-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.planning-dispatch-alert {
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  background: rgba(74, 94, 120, 0.12);
+  border: 1px solid rgba(74, 94, 120, 0.3);
+}
+
+.planning-dispatch-alert--warn {
+  background: rgba(201, 144, 53, 0.08);
+  border-color: rgba(201, 144, 53, 0.25);
+}
+
+.planning-dispatch-alert--error {
+  background: rgba(196, 68, 68, 0.07);
+  border-color: rgba(196, 68, 68, 0.22);
+}
+
+.planning-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 10, 16, 0.55);
+}
+
+.planning-modal-card {
+  width: min(420px, calc(100% - 32px));
+  padding: 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-md);
+}
