@@ -18,6 +18,29 @@ export type ExecutionAttempt = {
   atLabel: string;
 };
 
+export type ExecutionGpsVerificationMethod =
+  | 'gps-verified'
+  | 'manual-verification';
+
+/**
+ * Stop-level visit/arrival concept overlaying Published planning.
+ * Arrival belongs to the Physical Stop visit, not to each Order attempt.
+ */
+export type ExecutionStopVisit = {
+  /** Physical stop visit keyed by locationId. */
+  locationId: string;
+  arrivedAtLabel: string;
+  verificationMethod: ExecutionGpsVerificationMethod;
+  /**
+   * Optional operational signals shown when available (presentation only).
+   * This is not a fraud-proof rule.
+   */
+  distanceFromTarget?: number;
+  gpsAccuracyM?: number;
+  gpsReason?: string;
+  driverNote?: string;
+};
+
 export type ExecutionOrder = {
   id: string;
   taskId: string;
@@ -74,6 +97,7 @@ export type ExecutionSnapshot = {
   phase: ExecutionPhase;
   areas: ExecutionArea[];
   locations: ExecutionLocation[];
+  stopVisits: ExecutionStopVisit[];
   orders: ExecutionOrder[];
   notes: ExecutionFollowupNote[];
 };
