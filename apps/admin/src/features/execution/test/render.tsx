@@ -57,7 +57,7 @@ export async function renderExecution(
   }
 
   await plansPort.recalculatePlanningRoutes(planId);
-  await plansPort.publishPlanning(planId);
+  await plansPort.publishPlanning(planId, await plansPort.getPlanningState(planId));
 
   const executionPort = createExecutionTestPort(plansPort);
   if (opts?.portSetup) opts.portSetup(executionPort);

@@ -17,7 +17,11 @@ import {
 import { deriveRouteArea } from '@/features/planning/map/route-area';
 import { areaAndRouteIdentitiesAreDistinct, evaluatePublishReadiness } from '@/features/planning/planning-model';
 import { recalculateRoutes } from '@/features/planning/fixture/generate-areas';
-import { createPlansFixturePort } from '@/features/plans/fixture/plans-fixture';
+import { PLANNING_DRIVERS } from '@/features/planning/fixture/drivers';
+import {
+  createPlansFixturePort,
+  PlanningPublishBlockedError,
+} from '@/features/plans/fixture/plans-fixture';
 
 vi.mock('@/shared/config/env', () => ({
   env: {
@@ -32,7 +36,36 @@ vi.mock('@/features/execution/components/ExecutionMap', () => ({
 }));
 
 vi.mock('@/features/planning/components/PlanningMap', () => ({
-  PlanningMap: () => <div data-testid="planning-map" />,
+  PlanningMap: ({
+    onCorrectionMapClick,
+    onClearMapSelection,
+    onSelectRoute,
+    onSelectStop,
+  }: {
+    onCorrectionMapClick?: (coords: { lat: number; lng: number }) => void;
+    onClearMapSelection?: () => void;
+    onSelectRoute?: (areaId: string) => void;
+    onSelectStop?: (stopId: string) => void;
+  }) => (
+    <div data-testid="planning-map">
+      <button type="button" data-testid="map-select-A-01" onClick={() => onSelectRoute?.('A-01')}>
+        select A-01
+      </button>
+      <button type="button" data-testid="map-select-S-101" onClick={() => onSelectStop?.('S-101')}>
+        select S-101
+      </button>
+      <button type="button" data-testid="map-clear-selection" onClick={onClearMapSelection}>
+        clear selection
+      </button>
+      <button
+        type="button"
+        data-testid="correction-map-click"
+        onClick={() => onCorrectionMapClick?.({ lat: 35.751, lng: 51.401 })}
+      >
+        correction-map-click
+      </button>
+    </div>
+  ),
 }));
 
 afterEach(() => {
@@ -52,6 +85,45 @@ function renderPlan(planId: string, port = createPlansFixturePort({ listDelayMs:
       </AppProviders>,
     ),
   };
+}
+
+async function makePublishable(
+  port: ReturnType<typeof createPlansFixturePort>,
+  planId: string,
+) {
+  await port.generatePlanningAreas(planId, 3);
+  const fixture = await port.getPlanningState(planId);
+  const areaWithoutDriver = fixture.areas.find((area) => !area.driverId || !area.driverName);
+  if (areaWithoutDriver) {
+    await port.assignPlanningDriver(
+      planId,
+      areaWithoutDriver.areaId,
+      PLANNING_DRIVERS.find((driver) => driver.driverId === 'D-052') ?? PLANNING_DRIVERS[0]!,
+    );
+  }
+  for (const stop of fixture.unassignedStops) {
+    await port.assignPlanningStop(planId, stop.stopId, fixture.areas[0]!.areaId);
+  }
+  await port.recalculatePlanningRoutes(planId);
+  expect(port.getPlanningPublishReadiness(planId).canPublish).toBe(true);
+}
+
+async function prepareWithUnassignedOrders(
+  port: ReturnType<typeof createPlansFixturePort>,
+  planId: string,
+) {
+  await port.generatePlanningAreas(planId, 3);
+  const fixture = await port.getPlanningState(planId);
+  const areaWithoutDriver = fixture.areas.find((area) => !area.driverId || !area.driverName);
+  if (areaWithoutDriver) {
+    await port.assignPlanningDriver(
+      planId,
+      areaWithoutDriver.areaId,
+      PLANNING_DRIVERS.find((driver) => driver.driverId === 'D-052') ?? PLANNING_DRIVERS[0]!,
+    );
+  }
+  await port.recalculatePlanningRoutes(planId);
+  return fixture.unassignedStops.map((stop) => stop.stopId);
 }
 
 describe('A03 domain separation', () => {
@@ -184,26 +256,232 @@ describe('A03 publish readiness and revision spine', () => {
     );
   });
 
-  it('publishes a new immutable snapshot without using currentStage', async () => {
+  it('publishes a new immutable snapshot and advances workspace progression', async () => {
     const port = createPlansFixturePort({ listDelayMs: 0, mutateDelayMs: 0 });
     await port.generatePlanningAreas('P-2404', 3);
     const planBefore = await port.getPlan('P-2404');
-    const stageBefore = planBefore?.currentStage;
+    const statusBefore = planBefore?.status;
 
     await port.assignPlanningDriver('P-2404', 'A-03', { driverId: 'D-052', driverName: 'نادر عبادی' });
     await port.assignPlanningStop('P-2404', 'U-001', 'A-01');
     await port.assignPlanningStop('P-2404', 'U-002', 'A-02');
     await port.recalculatePlanningRoutes('P-2404');
 
-    const published = await port.publishPlanning('P-2404');
+    const published = await port.publishPlanning('P-2404', await port.getPlanningState('P-2404'));
     expect(published.publishedSnapshot).toBeTruthy();
-    expect(published.currentStage).toBe(stageBefore);
+    expect(published.currentStage).toBe('execution');
+    expect(published.suggestedSection).toBe('execution');
+    expect(published.status).toBe(statusBefore);
     const snapshot = port.getPublishedPlanningState('P-2404')!;
     const publishedDriver = snapshot.areas.find((area) => area.areaId === 'A-01')?.driverId;
     await port.assignPlanningDriver('P-2404', 'A-01', { driverId: 'D-001', driverName: 'محمد قاسمی' });
     const afterEdit = port.getPublishedPlanningState('P-2404')!;
     expect(afterEdit.areas.find((area) => area.areaId === 'A-01')?.driverId).toBe(publishedDriver);
     expect(port.hasUnpublishedPlanningChanges('P-2404')).toBe(true);
+  });
+
+  it('navigates to Execution only after a successful first publish', async () => {
+    const user = userEvent.setup();
+    const port = createPlansFixturePort({ listDelayMs: 0, mutateDelayMs: 0 });
+    await makePublishable(port, 'P-2404');
+    const { router } = renderPlan('P-2404', port);
+
+    await user.click(await screen.findByTestId('open-publish-plan'));
+    await user.click(screen.getByTestId('confirm-publish-plan'));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/plans/P-2404/execution'));
+    expect(port.getPublishedPlanningState('P-2404')).not.toBeNull();
+    expect(await port.getPlan('P-2404')).toMatchObject({
+      lifecycle: 'published',
+      currentStage: 'execution',
+      suggestedSection: 'execution',
+      status: 'planning_active',
+    });
+    expect(await screen.findByTestId('execution-map-stub')).toBeInTheDocument();
+    expect(screen.getByRole('link', { current: 'page', name: 'اجرا و پیگیری' })).toBeInTheDocument();
+
+    const publishedPlan = await port.getPlan('P-2404');
+    await router.navigate('/plans');
+    await user.click(await screen.findByRole('tab', { name: /همه برنامه‌ها/ }));
+    await user.click(await screen.findByRole('button', { name: /گذشته/ }));
+    await user.click(await screen.findByText(publishedPlan!.name));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/plans/P-2404/execution'));
+  });
+
+  it('uses the same excluded-order readiness in the UI and publish guard', async () => {
+    const user = userEvent.setup();
+    const port = createPlansFixturePort({ listDelayMs: 0, mutateDelayMs: 0 });
+    const unassignedStopIds = await prepareWithUnassignedOrders(port, 'P-2404');
+    const { router } = renderPlan('P-2404', port);
+
+    for (const stopId of unassignedStopIds) {
+      await user.click(await screen.findByTestId(`exclude-unassigned-${stopId}`));
+    }
+    await user.click(screen.getByTestId('open-publish-plan'));
+    expect(screen.getByTestId('publish-ready')).toBeInTheDocument();
+    await user.click(screen.getByTestId('confirm-publish-plan'));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/plans/P-2404/execution'));
+    expect(port.getPublishedPlanningState('P-2404')).not.toBeNull();
+    expect(await port.getPlan('P-2404')).toMatchObject({
+      lifecycle: 'published',
+      currentStage: 'execution',
+      suggestedSection: 'execution',
+      status: 'planning_active',
+    });
+  });
+
+  it('publishes the complete Working state produced by the real P-2404 UI flow', async () => {
+    const user = userEvent.setup();
+    const port = createPlansFixturePort({ listDelayMs: 0, mutateDelayMs: 0 });
+    await port.generatePlanningAreas('P-2404', 3);
+    const generated = await port.getPlanningState('P-2404');
+    const unassignedStopIds = generated.unassignedStops.map((stop) => stop.stopId);
+    const excludedOrderIds = generated.unassignedStops.flatMap((stop) =>
+      stop.tasks.map((task) => task.orderId),
+    );
+    const { router } = renderPlan('P-2404', port);
+
+    await user.click(await screen.findByTestId('route-row-A-03'));
+    await user.click(screen.getByTestId('assign-driver'));
+    await user.click(screen.getByTestId('driver-option-D-052'));
+    await user.click(screen.getByTestId('driver-confirm-submit'));
+    await waitFor(() =>
+      expect(screen.getByTestId('route-driver-name')).toHaveTextContent('نادر عبادی'),
+    );
+
+    await user.click(screen.getByTestId('map-select-A-01'));
+    await user.click(screen.getByTestId('map-select-S-101'));
+    await user.click(screen.getByTestId('start-location-correction'));
+    await user.click(screen.getByTestId('correction-map-click'));
+    await user.click(screen.getByTestId('correction-save'));
+    await waitFor(() =>
+      expect(screen.queryByTestId('location-correction-panel')).not.toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByTestId('start-area-transfer'));
+    await user.click(screen.getByTestId('transfer-dest-route-A-02'));
+    await user.click(screen.getByTestId('confirm-area-transfer'));
+    await waitFor(() =>
+      expect(screen.queryByTestId('area-transfer-picker')).not.toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByTestId('map-clear-selection'));
+    for (const stopId of unassignedStopIds) {
+      await user.click(await screen.findByTestId(`exclude-unassigned-${stopId}`));
+    }
+    await user.click(screen.getByTestId('recalculate-routes'));
+    await waitFor(() =>
+      expect(screen.queryByTestId('recalculate-routes')).not.toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByTestId('open-publish-plan'));
+    expect(screen.getByTestId('publish-ready')).toBeInTheDocument();
+    await user.click(screen.getByTestId('confirm-publish-plan'));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/plans/P-2404/execution'));
+    expect(screen.queryByText('انتشار ناموفق بود.')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('execution-map-stub')).toBeInTheDocument();
+
+    const published = port.getPublishedPlanningState('P-2404')!;
+    expect(published.areas.find((area) => area.areaId === 'A-03')).toMatchObject({
+      driverId: 'D-052',
+      driverName: 'نادر عبادی',
+    });
+    const transferred = published.areas
+      .find((area) => area.areaId === 'A-02')
+      ?.stops.find((stop) => stop.stopId === 'S-101');
+    expect(transferred).toMatchObject({ lat: 35.751, lng: 51.401 });
+    expect(published.areas.find((area) => area.areaId === 'A-01')?.memberStopIds).not.toContain(
+      'S-101',
+    );
+    expect(published.excludedOrderIds).toEqual(expect.arrayContaining(excludedOrderIds));
+    expect(await port.getPlan('P-2404')).toMatchObject({
+      lifecycle: 'published',
+      currentStage: 'execution',
+      suggestedSection: 'execution',
+      status: 'planning_active',
+    });
+  });
+
+  it('shows genuine unassigned-order blockers and keeps the publish guard authoritative', async () => {
+    const user = userEvent.setup();
+    const port = createPlansFixturePort({ listDelayMs: 0, mutateDelayMs: 0 });
+    await prepareWithUnassignedOrders(port, 'P-2404');
+    const { router } = renderPlan('P-2404', port);
+
+    await user.click(await screen.findByTestId('open-publish-plan'));
+    expect(screen.getByTestId('publish-blockers')).toHaveTextContent('سفارش بدون محدوده');
+    expect(screen.getByTestId('confirm-publish-plan')).toBeDisabled();
+    const working = await port.getPlanningState('P-2404');
+    try {
+      await port.publishPlanning('P-2404', working);
+      throw new Error('expected publish to be blocked');
+    } catch (error) {
+      expect(error).toBeInstanceOf(PlanningPublishBlockedError);
+      expect((error as PlanningPublishBlockedError).readiness).toEqual({
+        canPublish: false,
+        blockers: [expect.objectContaining({ code: 'unassigned-order' })],
+      });
+    }
+    expect(router.state.location.pathname).toBe('/plans/P-2404/planning');
+    expect(port.getPublishedPlanningState('P-2404')).toBeNull();
+  });
+
+  it('keeps Planning progression unchanged when publish fails', async () => {
+    const user = userEvent.setup();
+    const port = createPlansFixturePort({ listDelayMs: 0, mutateDelayMs: 0 });
+    await makePublishable(port, 'P-2404');
+    port.setNextPlanningFailure('server');
+    const { router } = renderPlan('P-2404', port);
+
+    await user.click(await screen.findByTestId('open-publish-plan'));
+    await user.click(screen.getByTestId('confirm-publish-plan'));
+
+    expect(await screen.findByText('انتشار ناموفق بود.')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/plans/P-2404/planning');
+    expect(port.getPublishedPlanningState('P-2404')).toBeNull();
+    expect(await port.getPlan('P-2404')).toMatchObject({
+      currentStage: 'planning',
+      suggestedSection: 'planning',
+    });
+  });
+
+  it('cancels publishing without snapshot, progression, or navigation', async () => {
+    const user = userEvent.setup();
+    const port = createPlansFixturePort({ listDelayMs: 0, mutateDelayMs: 0 });
+    await makePublishable(port, 'P-2404');
+    const { router } = renderPlan('P-2404', port);
+
+    await user.click(await screen.findByTestId('open-publish-plan'));
+    await user.click(screen.getByTestId('publish-cancel'));
+
+    expect(screen.queryByTestId('publish-confirm')).not.toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/plans/P-2404/planning');
+    expect(port.getPublishedPlanningState('P-2404')).toBeNull();
+    expect(await port.getPlan('P-2404')).toMatchObject({
+      currentStage: 'planning',
+      suggestedSection: 'planning',
+    });
+  });
+
+  it('retains in-progress lifecycle when republishing and returns to Execution', async () => {
+    const user = userEvent.setup();
+    const port = createPlansFixturePort({ listDelayMs: 0, mutateDelayMs: 0 });
+    await makePublishable(port, 'P-2403');
+    const { router } = renderPlan('P-2403', port);
+
+    await user.click(await screen.findByTestId('open-publish-plan'));
+    await user.click(screen.getByTestId('confirm-publish-plan'));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/plans/P-2403/execution'));
+    expect(await port.getPlan('P-2403')).toMatchObject({
+      lifecycle: 'inProgress',
+      a01Mode: 'execution-locked',
+      currentStage: 'execution',
+      suggestedSection: 'execution',
+      status: 'active',
+    });
   });
 });
 

@@ -87,7 +87,7 @@ describe('A06 — Driver Directory + Planning integration', () => {
       await plansPort.assignPlanningDriver('P-2403', a.areaId, { driverId: d.driverId, driverName: d.name });
     }
     await plansPort.recalculatePlanningRoutes('P-2403');
-    await plansPort.publishPlanning('P-2403');
+    await plansPort.publishPlanning('P-2403', await plansPort.getPlanningState('P-2403'));
 
     const published = plansPort.getPublishedPlanningState('P-2403');
     expect(published).not.toBeNull();

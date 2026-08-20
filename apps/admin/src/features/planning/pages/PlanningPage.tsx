@@ -1,11 +1,12 @@
 import { useContext, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 import { PlanningWorkspace } from '@/features/planning/components/PlanningWorkspace';
 import type { PlanningPlanFixture } from '@/features/planning/fixture/types';
 import { PlanContextHeader } from '@/features/plans/components/PlanContextHeader';
 import { PlansDataContext } from '@/features/plans/fixture/plans-data-context';
 import { usePlan } from '@/features/plans/hooks/usePlansData';
+import { planStagePath } from '@/features/plans/plan-stage-path';
 import { Button, InlineMessage } from '@/shared/ui';
 import '@/features/planning/styles/planning.css';
 
@@ -14,6 +15,7 @@ import '@/features/planning/styles/planning.css';
  */
 export function PlanningPage() {
   const { planId } = useParams<{ planId: string }>();
+  const navigate = useNavigate();
   const { plan, status, reload } = usePlan(planId);
   const port = useContext(PlansDataContext);
   const [fixture, setFixture] = useState<PlanningPlanFixture | null>(null);
@@ -99,6 +101,9 @@ export function PlanningPage() {
         plan={plan}
         initialFixture={fixture}
         initialGenerationPhase={fixture.generationPhase}
+        onPublishSuccess={(publishedPlanId) =>
+          navigate(planStagePath(publishedPlanId, 'execution'))
+        }
       />
     </div>
   );

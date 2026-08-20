@@ -171,7 +171,7 @@ export function publishWorking(store: PlanningPlanStore): PlanningPlanStore {
 
 export function planningReadiness(
   working: PlanningPlanFixture,
-  extras?: { mutationInProgress?: boolean },
+  extras?: { excludedOrderIds?: ReadonlySet<string>; mutationInProgress?: boolean },
 ): PlanningPublishReadiness {
   return evaluatePublishReadiness(working, extras);
 }

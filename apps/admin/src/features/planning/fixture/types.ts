@@ -136,6 +136,8 @@ export type PlanningPlanFixture = {
   reviewBlockerCount: number;
   eligibleOrderCount: number;
   upstreamSpatialAttention: boolean;
+  /** Orders intentionally excluded from dispatch in this Working/Published revision. */
+  excludedOrderIds?: string[];
   lastMutationImpact?: PlanningMutationImpact;
 };
 

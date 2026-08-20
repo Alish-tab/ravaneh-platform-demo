@@ -45,7 +45,7 @@ async function publishPlan(plansPort: ReturnType<typeof createPlansFixturePort>,
     if (area) await plansPort.assignPlanningStop(planId, stop.stopId, area.areaId);
   }
   await plansPort.recalculatePlanningRoutes(planId);
-  await plansPort.publishPlanning(planId);
+  await plansPort.publishPlanning(planId, await plansPort.getPlanningState(planId));
 }
 
 describe('A05 Global Order Search — port level', () => {

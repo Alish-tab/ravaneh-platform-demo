@@ -7,7 +7,7 @@ import { TRANSFER_UNASSIGNED } from '@/features/planning/components/AreaTransfer
 import { PlanningMap } from '@/features/planning/components/PlanningMap';
 import { PlanningSummaryBar } from '@/features/planning/components/PlanningSummaryBar';
 import { findStopInPlan, PLANNING_PLAN_FIXTURE } from '@/features/planning/fixture/planning-fixture';
-import { evaluatePublishReadiness } from '@/features/planning/planning-model';
+import { planningReadiness } from '@/features/planning/fixture/planning-store';
 import type { PlanningPlanFixture } from '@/features/planning/fixture/types';
 import type {
   PlanningGenerationPhase,
@@ -30,6 +30,7 @@ type PlanningWorkspaceProps = {
   initialGenerationPhase?: PlanningGenerationPhase;
   simulateGenerationFail?: boolean;
   generationTiming?: PlanningGenerationTiming;
+  onPublishSuccess?: (planId: string) => void;
 };
 
 export function PlanningWorkspace({
@@ -39,6 +40,7 @@ export function PlanningWorkspace({
   initialGenerationPhase = 'ready',
   simulateGenerationFail = false,
   generationTiming,
+  onPublishSuccess,
 }: PlanningWorkspaceProps) {
   const port = useContext(PlansDataContext);
   const {
@@ -99,13 +101,16 @@ export function PlanningWorkspace({
   const unpublished = planId && port ? port.hasUnpublishedPlanningChanges(planId) : false;
   const hasPublished = Boolean(plan?.publishedSnapshot) || Boolean(planId && port?.getPublishedPlanningState(planId));
 
+  const currentWorking = useMemo<PlanningPlanFixture>(
+    () => ({ ...fixture, excludedOrderIds: [...planning.excludedOrderIds] }),
+    [fixture, planning.excludedOrderIds],
+  );
   const readiness = useMemo(
     () =>
-      evaluatePublishReadiness(fixture, {
-        excludedOrderIds: planning.excludedOrderIds,
+      planningReadiness(currentWorking, {
         mutationInProgress: isPending || rebuildBusy || publishBusy,
       }),
-    [fixture, isPending, planning.excludedOrderIds, publishBusy, rebuildBusy],
+    [currentWorking, isPending, publishBusy, rebuildBusy],
   );
 
   const dirtyRouteCount = fixture.routes.filter((route) => route.dirty).length;
@@ -183,7 +188,7 @@ export function PlanningWorkspace({
     setRecalcBusy(true);
     setActionError(null);
     try {
-      const next = await port.recalculatePlanningRoutes(planId);
+      const next = await port.recalculatePlanningRoutes(planId, currentWorking);
       replaceFixture(next);
     } catch {
       setActionError('محاسبه مجدد مسیر ناموفق بود.');
@@ -213,15 +218,15 @@ export function PlanningWorkspace({
     setPublishBusy(true);
     setActionError(null);
     try {
-      await port.publishPlanning(planId);
-      const next = await port.getPlanningState(planId);
-      replaceFixture(next);
-      setPublishOpen(false);
+      await port.publishPlanning(planId, currentWorking);
     } catch {
       setActionError('انتشار ناموفق بود.');
-    } finally {
       setPublishBusy(false);
+      return;
     }
+    setPublishBusy(false);
+    setPublishOpen(false);
+    onPublishSuccess?.(planId);
   };
 
   return (

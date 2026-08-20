@@ -69,6 +69,16 @@ import type { PlanningLatLng } from '@/features/planning/fixture/update-stop-loc
 
 export type PlansListMode = 'ok' | 'loading' | 'error';
 
+export class PlanningPublishBlockedError extends Error {
+  readonly readiness: PlanningPublishReadiness;
+
+  constructor(readiness: PlanningPublishReadiness) {
+    super('PLANNING_PUBLISH_BLOCKED');
+    this.name = 'PlanningPublishBlockedError';
+    this.readiness = structuredClone(readiness);
+  }
+}
+
 export type UploadInspectResult =
   | { kind: 'ok' }
   | { kind: 'fail-upload' }
@@ -129,7 +139,10 @@ export type PlansDataPort = {
     options?: { leaveUnassigned?: boolean },
   ) => Promise<PlanningPlanFixture>;
   rebuildPlanningAreas: (planId: string, targetCount: number) => Promise<PlanningPlanFixture>;
-  recalculatePlanningRoutes: (planId: string) => Promise<PlanningPlanFixture>;
+  recalculatePlanningRoutes: (
+    planId: string,
+    working?: PlanningPlanFixture,
+  ) => Promise<PlanningPlanFixture>;
   assignPlanningDriver: (
     planId: string,
     areaId: string,
@@ -163,7 +176,10 @@ export type PlansDataPort = {
     coords: PlanningLatLng,
   ) => Promise<PlanningPlanFixture>;
   getPlanningPublishReadiness: (planId: string) => PlanningPublishReadiness;
-  publishPlanning: (planId: string) => Promise<A01PlanViewModel>;
+  publishPlanning: (
+    planId: string,
+    working: PlanningPlanFixture,
+  ) => Promise<A01PlanViewModel>;
   lookupPlanningDispatch: (planId: string, query: string) => PlanningDispatchResult;
   hasUnpublishedPlanningChanges: (planId: string) => boolean;
   setPlanningRebuildLock: (planId: string, locked: boolean) => void;
@@ -847,9 +863,13 @@ export function createPlansFixturePort(options?: {
       return structuredClone(next.working);
     },
 
-    async recalculatePlanningRoutes(planId) {
+    async recalculatePlanningRoutes(planId, working) {
       await guardPlanningMutation();
       const { store } = requireMutablePlanning(planId);
+      if (working) {
+        if (working.planId !== planId) throw new Error('PLANNING_PLAN_MISMATCH');
+        store.working = structuredClone(working);
+      }
       store.working = beginRecalculateRoutes(store.working);
       emit();
       await delay(mutateDelayMs);
@@ -956,14 +976,18 @@ export function createPlansFixturePort(options?: {
       return planningReadiness(store.working);
     },
 
-    async publishPlanning(planId) {
+    async publishPlanning(planId, working) {
       await guardPlanningMutation();
       const { plan, store } = requireMutablePlanning(planId);
-      const readiness = planningReadiness(store.working);
+      if (working.planId !== planId) throw new Error('PLANNING_PLAN_MISMATCH');
+      const readiness = planningReadiness(working);
       if (!readiness.canPublish) {
-        throw new Error('PLANNING_PUBLISH_BLOCKED');
+        throw new PlanningPublishBlockedError(readiness);
       }
-      const publishedStore = publishWorking(store);
+      const publishedStore = publishWorking({
+        ...store,
+        working: structuredClone(working),
+      });
       planningStores.set(planId, publishedStore);
       unpublishedPlanning.delete(planId);
       const review = ensureReviewStore(planId);
@@ -980,6 +1004,8 @@ export function createPlansFixturePort(options?: {
         canMutateDataset: true,
         needsAttention: null,
         isPreparing: false,
+        currentStage: 'execution',
+        suggestedSection: 'execution',
         lastChanged: 'همین الان',
       });
       replacePlan(planId, next);

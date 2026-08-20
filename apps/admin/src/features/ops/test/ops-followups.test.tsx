@@ -82,7 +82,7 @@ describe('A05 Follow-up backlog', () => {
       if (area) await plansPort.assignPlanningStop('P-2403', stop.stopId, area.areaId);
     }
     await plansPort.recalculatePlanningRoutes('P-2403');
-    await plansPort.publishPlanning('P-2403');
+    await plansPort.publishPlanning('P-2403', await plansPort.getPlanningState('P-2403'));
 
     const executionPort = createExecutionTestPort(plansPort);
     const snapshot = await executionPort.getSnapshot('P-2403');

@@ -238,7 +238,8 @@ export function evaluatePublishReadiness(
     driverConflicts?: boolean;
   } = {},
 ): PlanningPublishReadiness {
-  const excluded = options.excludedOrderIds ?? new Set<string>();
+  const excluded =
+    options.excludedOrderIds ?? new Set<string>(fixture.excludedOrderIds ?? []);
   const blockers: PlanningPublishReadiness['blockers'] = [];
 
   if (fixture.generationPhase !== 'generated') {

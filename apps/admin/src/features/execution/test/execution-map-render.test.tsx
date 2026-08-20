@@ -44,7 +44,7 @@ describe('A04 map render path', () => {
     }
 
     await plansPort.recalculatePlanningRoutes(planId);
-    await plansPort.publishPlanning(planId);
+    await plansPort.publishPlanning(planId, await plansPort.getPlanningState(planId));
 
     const executionPort = createExecutionTestPort(plansPort);
 

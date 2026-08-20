@@ -50,7 +50,10 @@ export async function renderOps(
     }
   }
   await plansPort.recalculatePlanningRoutes(inProgressPlanId);
-  await plansPort.publishPlanning(inProgressPlanId);
+  await plansPort.publishPlanning(
+    inProgressPlanId,
+    await plansPort.getPlanningState(inProgressPlanId),
+  );
 
   const executionPort = createExecutionTestPort(plansPort);
   const opsPort = createOpsHomePort(plansPort, executionPort);
