@@ -42,7 +42,7 @@ export function ExecutionMap({
       data-selected-location-id={selectedLocationId ?? ''}
     >
       <MapErrorBoundary>
-        <BaseMap className="h-full w-full" zoomControl scrollWheelZoom={false} zoom={12}>
+        <BaseMap className="h-full w-full" zoomControl scrollWheelZoom zoom={12}>
           <InvalidateOnMount />
           <InvalidateOnLayout trigger={panelCollapsed} />
           <FitBoundsOnMount bounds={bounds} />
