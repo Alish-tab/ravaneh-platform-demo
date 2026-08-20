@@ -8,13 +8,13 @@ import { normalizePlanViewModel } from '@/features/plans/normalize-plan';
  * Fixture clock for date grouping is `FIXTURE_REFERENCE_DATE` (injectable).
  * That is not a product-hardcoded "today".
  */
-export const FIXTURE_REFERENCE_DATE = '1403-06-01';
+export const FIXTURE_REFERENCE_DATE = '1405-06-01';
 
 export const A01_DEMO_PLANS: A01PlanViewModel[] = [
   normalizePlanViewModel({
     id: 'P-2408',
     name: 'برنامه تحویل — ۲ شهریور — ۹ تا ۱۲',
-    deliveryDate: '۱۴۰۳/۰۶/۰۲',
+    deliveryDate: '۱۴۰/۰۶/۰۲',
     window: '۹ تا ۱۲',
     lastChanged: '۱ ساعت پیش',
     lifecycle: 'draft',
@@ -28,7 +28,7 @@ export const A01_DEMO_PLANS: A01PlanViewModel[] = [
     currentStage: 'intake',
     status: 'intake_failed',
     importedFile: {
-      name: 'orders_1403-06-02.xlsx',
+      name: 'orders_1405-06-02.xlsx',
       uploadedAt: '۱ ساعت پیش',
       rowCount: 0,
     },

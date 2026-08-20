@@ -29,7 +29,9 @@ export function usePlanningSelection(fixture: PlanningPlanFixture) {
   const [justAssignedRouteId, setJustAssignedRouteId] = useState<string | null>(null);
   const [correctionStopId, setCorrectionStopId] = useState<string | null>(null);
   const [proposedLocation, setProposedLocation] = useState<PlanningLatLng | null>(null);
-  const [excludedOrderIds, setExcludedOrderIds] = useState<Set<string>>(() => new Set());
+  const [excludedOrderIds, setExcludedOrderIds] = useState<Set<string>>(
+    () => new Set(fixture.excludedOrderIds ?? []),
+  );
   const [showRouteAreas, setShowRouteAreas] = useState(true);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [areaFilter, setAreaFilter] = useState<PlanningAreaFilter>('all');
@@ -152,12 +154,14 @@ export function usePlanningSelection(fixture: PlanningPlanFixture) {
    * Model remains per-order for dispatch readiness; UI action is stop-scoped.
    */
   const excludeUnassignedStopOrders = useCallback(
-    (stopId: string) => {
+    (stopId: string): Set<string> | null => {
       const stop = fixture.unassignedStops.find((item) => item.stopId === stopId);
-      if (!stop) return;
+      if (!stop) return null;
       const toExclude = actionableOrderIdsOnStop(stop, excludedOrderIds);
-      if (toExclude.length === 0) return;
-      setExcludedOrderIds((prev) => addExcludedOrderIds(prev, toExclude));
+      if (toExclude.length === 0) return null;
+      const next = addExcludedOrderIds(excludedOrderIds, toExclude);
+      setExcludedOrderIds(next);
+      return next;
     },
     [excludedOrderIds, fixture.unassignedStops],
   );

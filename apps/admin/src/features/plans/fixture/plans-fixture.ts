@@ -36,6 +36,7 @@ import type {
   MergeStrategy,
 } from '@/features/plans/a01-types';
 import { A01_DEMO_PLANS, FIXTURE_REFERENCE_DATE } from '@/features/plans/fixture/demo-plans';
+import { createFrontendDemoDataForImportedPlan } from '@/features/plans/fixture/bootstrap-imported-plan';
 import { normalizePlanViewModel, type PlanFixtureSeed } from '@/features/plans/normalize-plan';
 import { toServiceDateSortKey } from '@/features/plans/plan-name';
 import { lookupDispatchOrder } from '@/features/planning/fixture/dispatch-lookup';
@@ -175,6 +176,10 @@ export type PlansDataPort = {
     stopId: string,
     coords: PlanningLatLng,
   ) => Promise<PlanningPlanFixture>;
+  setPlanningExcludedOrders: (
+    planId: string,
+    orderIds: string[],
+  ) => Promise<PlanningPlanFixture>;
   getPlanningPublishReadiness: (planId: string) => PlanningPublishReadiness;
   publishPlanning: (
     planId: string,
@@ -240,6 +245,7 @@ export function createPlansFixturePort(options?: {
     new Map([...reviewStores.entries()].map(([id, store]) => [id, store.working])),
   );
   const unpublishedPlanning = new Set<string>();
+  const bootstrappedImportedPlans = new Set<string>();
   let listMode: PlansListMode = 'ok';
   let nextCreateFailure = false;
   let nextApplyFailure = false;
@@ -540,6 +546,7 @@ export function createPlansFixturePort(options?: {
       reviewStores.delete(id);
       planningStores.delete(id);
       unpublishedPlanning.delete(id);
+      bootstrappedImportedPlans.delete(id);
       emit();
     },
 
@@ -577,6 +584,14 @@ export function createPlansFixturePort(options?: {
         isPreparing: outcome !== 'clean',
         canDeleteDraft: false,
       });
+      const bootstrap = bootstrappedImportedPlans.has(id)
+        ? null
+        : createFrontendDemoDataForImportedPlan(next);
+      if (bootstrap) {
+        reviewStores.set(id, bootstrap.review);
+        planningStores.set(id, bootstrap.planning);
+        bootstrappedImportedPlans.add(id);
+      }
       replacePlan(id, next);
       emit();
       return structuredClone(next);
@@ -971,6 +986,18 @@ export function createPlansFixturePort(options?: {
       return structuredClone(next);
     },
 
+    async setPlanningExcludedOrders(planId, orderIds) {
+      await guardPlanningMutation();
+      const { store } = requireMutablePlanning(planId);
+      store.working = {
+        ...store.working,
+        excludedOrderIds: [...new Set(orderIds)],
+      };
+      markPlanningEdited(planId);
+      emit();
+      return structuredClone(store.working);
+    },
+
     getPlanningPublishReadiness(planId) {
       const store = ensurePlanningStore(planId);
       return planningReadiness(store.working);
@@ -1070,6 +1097,7 @@ export function createPlansFixturePort(options?: {
         new Map([...reviewStores.entries()].map(([id, item]) => [id, item.working])),
       );
       unpublishedPlanning.clear();
+      bootstrappedImportedPlans.clear();
       listMode = 'ok';
       nextCreateFailure = false;
       nextApplyFailure = false;

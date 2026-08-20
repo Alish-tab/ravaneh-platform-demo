@@ -47,14 +47,14 @@ export function PlanningWorkspace({
     fixture,
     replaceFixture,
     isPending,
-    assignStopToRoute,
-    moveStopToRoute,
-    removeStopFromRoute,
-    moveOrderToRoute,
-    updateStopLocation,
-    assignDriverToRoute,
-    removeDriverFromRoute,
-    setDriverAssignmentLocked,
+    assignStopToRoute: assignStopLocally,
+    moveStopToRoute: moveStopLocally,
+    removeStopFromRoute: removeStopLocally,
+    moveOrderToRoute: moveOrderLocally,
+    updateStopLocation: updateLocationLocally,
+    assignDriverToRoute: assignDriverLocally,
+    removeDriverFromRoute: removeDriverLocally,
+    setDriverAssignmentLocked: setDriverLockLocally,
   } = usePlanningFixture(initialFixture);
 
   const runGenerate = useCallback(
@@ -126,7 +126,11 @@ export function PlanningWorkspace({
   const handleConfirmAreaAssign = async (areaId: string) => {
     const stopId = planning.areaPickerStopId;
     if (!stopId) return;
-    const ok = await assignStopToRoute(stopId, areaId, planning.excludedOrderIds);
+    const next = planId && port
+      ? await port.assignPlanningStop(planId, stopId, areaId)
+      : null;
+    if (next) replaceFixture(next);
+    const ok = next ? true : await assignStopLocally(stopId, areaId, planning.excludedOrderIds);
     if (ok) planning.applyAfterAssign(stopId, areaId);
   };
 
@@ -136,7 +140,13 @@ export function PlanningWorkspace({
 
     if (flow.scope === 'order' && flow.orderId) {
       if (destinationId === TRANSFER_UNASSIGNED) return;
-      const result = await moveOrderToRoute(flow.orderId, destinationId);
+      const persisted = planId && port
+        ? await port.transferPlanningOrder(planId, flow.orderId, destinationId)
+        : null;
+      if (persisted) replaceFixture(persisted.fixture);
+      const result = persisted
+        ? { ok: true, destinationStopId: persisted.destinationStopId }
+        : await moveOrderLocally(flow.orderId, destinationId);
       if (result.ok && result.destinationStopId) {
         planning.applyAfterOrderTransfer(flow.orderId, destinationId, result.destinationStopId);
       }
@@ -145,12 +155,16 @@ export function PlanningWorkspace({
 
     const stopId = flow.stopId;
     if (destinationId === TRANSFER_UNASSIGNED) {
-      const ok = await removeStopFromRoute(stopId);
+      const next = planId && port ? await port.unassignPlanningStop(planId, stopId) : null;
+      if (next) replaceFixture(next);
+      const ok = next ? true : await removeStopLocally(stopId);
       if (ok) planning.applyAfterUnassign(stopId);
       return;
     }
 
-    const ok = await moveStopToRoute(stopId, destinationId);
+    const next = planId && port ? await port.transferPlanningStop(planId, stopId, destinationId) : null;
+    if (next) replaceFixture(next);
+    const ok = next ? true : await moveStopLocally(stopId, destinationId);
     if (ok) planning.applyAfterRouteTransfer(stopId, destinationId);
   };
 
@@ -158,28 +172,41 @@ export function PlanningWorkspace({
     const areaId = planning.driverPickerRouteId;
     const driver = planning.pendingDriver;
     if (!areaId || !driver) return;
-    const ok = await assignDriverToRoute(areaId, driver);
+    const next = planId && port ? await port.assignPlanningDriver(planId, areaId, driver) : null;
+    if (next) replaceFixture(next);
+    const ok = next ? true : await assignDriverLocally(areaId, driver);
     if (ok) planning.applyAfterDriverAssign(areaId);
   };
 
   const handleConfirmRemoveDriver = async () => {
     const areaId = planning.removeDriverRouteId;
     if (!areaId) return;
-    const ok = await removeDriverFromRoute(areaId);
+    const next = planId && port ? await port.removePlanningDriver(planId, areaId) : null;
+    if (next) replaceFixture(next);
+    const ok = next ? true : await removeDriverLocally(areaId);
     if (ok) planning.applyAfterDriverRemove(areaId);
   };
 
-  const handleToggleDriverLock = (areaId: string) => {
+  const handleToggleDriverLock = async (areaId: string) => {
     const area = fixture.areas.find((item) => item.areaId === areaId);
     if (!area?.driverId) return;
-    setDriverAssignmentLocked(areaId, !area.driverAssignmentLocked);
+    if (planId && port) {
+      const next = await port.lockPlanningDriver(planId, areaId, !area.driverAssignmentLocked);
+      replaceFixture(next);
+      return;
+    }
+    setDriverLockLocally(areaId, !area.driverAssignmentLocked);
   };
 
   const handleSaveLocationCorrection = async () => {
     const stopId = planning.correctionStopId;
     const proposed = planning.proposedLocation;
     if (!stopId || !proposed) return;
-    const ok = await updateStopLocation(stopId, proposed);
+    const next = planId && port
+      ? await port.updatePlanningStopLocation(planId, stopId, proposed)
+      : null;
+    if (next) replaceFixture(next);
+    const ok = next ? true : await updateLocationLocally(stopId, proposed);
     if (ok) planning.applyAfterLocationCorrection(stopId);
   };
 
@@ -372,7 +399,12 @@ export function PlanningWorkspace({
             onConfirmAreaAssign={(areaId) => {
               void handleConfirmAreaAssign(areaId);
             }}
-            onExcludeUnassignedStop={planning.excludeUnassignedStopOrders}
+            onExcludeUnassignedStop={(stopId) => {
+              const next = planning.excludeUnassignedStopOrders(stopId);
+              if (next && planId && port) {
+                void port.setPlanningExcludedOrders(planId, [...next]).then(replaceFixture);
+              }
+            }}
             onOpenTransferFromStop={planning.openTransferFromStop}
             onOpenTransferFromOrder={planning.openTransferFromOrder}
             onSetTransferScope={planning.setTransferScope}

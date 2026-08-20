@@ -119,7 +119,7 @@ export function CreatePlanDialog({ onSubmit, onCancel }: CreatePlanDialogProps) 
           <div className="relative">
             <Input
               id="a01-delivery-date"
-              placeholder="مثال: ۱۴۰۳/۰۶/۰۵"
+              placeholder="مثال: ۱۴۰۵/۰۶/۰۵"
               className="pe-8"
               error={Boolean(errors.deliveryDate)}
               aria-required
