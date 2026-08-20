@@ -15,7 +15,10 @@ import {
   PLANNING_PLAN_FIXTURE,
 } from '@/features/planning/fixture/planning-fixture';
 import { deriveRouteArea } from '@/features/planning/map/route-area';
-import { areaAndRouteIdentitiesAreDistinct, evaluatePublishReadiness } from '@/features/planning/planning-model';
+import {
+  areaAndRouteIdentitiesAreDistinct,
+  evaluatePublishReadiness,
+} from '@/features/planning/planning-model';
 import { recalculateRoutes } from '@/features/planning/fixture/generate-areas';
 import { PLANNING_DRIVERS } from '@/features/planning/fixture/drivers';
 import {
@@ -72,7 +75,10 @@ afterEach(() => {
   cleanup();
 });
 
-function renderPlan(planId: string, port = createPlansFixturePort({ listDelayMs: 0, mutateDelayMs: 0 })) {
+function renderPlan(
+  planId: string,
+  port = createPlansFixturePort({ listDelayMs: 0, mutateDelayMs: 0 }),
+) {
   const router = createMemoryRouter(appRoutes, {
     initialEntries: [`/plans/${planId}/planning`],
   });
@@ -87,10 +93,7 @@ function renderPlan(planId: string, port = createPlansFixturePort({ listDelayMs:
   };
 }
 
-async function makePublishable(
-  port: ReturnType<typeof createPlansFixturePort>,
-  planId: string,
-) {
+async function makePublishable(port: ReturnType<typeof createPlansFixturePort>, planId: string) {
   await port.generatePlanningAreas(planId, 3);
   const fixture = await port.getPlanningState(planId);
   const areaWithoutDriver = fixture.areas.find((area) => !area.driverId || !area.driverName);
@@ -156,7 +159,9 @@ describe('A03 domain separation', () => {
     const result = moveOrderToRoute(createPlanningFixture('P-2404'), '10123457', 'A-02')!;
     const source = result.fixture.areas[0]!.stops.find((stop) => stop.stopId === 'S-102')!;
     expect(source.tasks.map((task) => task.orderId)).toEqual(['10123458']);
-    const moved = result.fixture.areas[1]!.stops.find((stop) => stop.stopId === result.destinationStopId)!;
+    const moved = result.fixture.areas[1]!.stops.find(
+      (stop) => stop.stopId === result.destinationStopId,
+    )!;
     expect(moved.tasks.map((task) => task.orderId)).toEqual(['10123457']);
     expect(moved.lat).toBe(source.lat);
     expect(moved.lng).toBe(source.lng);
@@ -166,7 +171,9 @@ describe('A03 domain separation', () => {
 describe('A03 generation from current Plan', () => {
   it('uses Working Plan data rather than a hardcoded 181-order universe', async () => {
     const { port } = renderPlan('P-2404');
-    expect(await screen.findByTestId('start-generation')).toHaveTextContent('ساخت محدوده‌های توزیع');
+    expect(await screen.findByTestId('start-generation')).toHaveTextContent(
+      'ساخت محدوده‌های توزیع',
+    );
     const state = await port.getPlanningState('P-2404');
     expect(state.eligibleOrderCount).toBeGreaterThan(0);
     expect(state.eligibleOrderCount).toBeLessThan(50);
@@ -205,7 +212,9 @@ describe('A03 driver steal / conflict', () => {
       driverName: 'کاوه میرزایی',
     });
     expect(stolen).toBeNull();
-    expect(PLANNING_PLAN_FIXTURE.areas.find((area) => area.areaId === 'A-01')?.driverId).toBe('D-041');
+    expect(PLANNING_PLAN_FIXTURE.areas.find((area) => area.areaId === 'A-01')?.driverId).toBe(
+      'D-041',
+    );
   });
 });
 
@@ -262,7 +271,10 @@ describe('A03 publish readiness and revision spine', () => {
     const planBefore = await port.getPlan('P-2404');
     const statusBefore = planBefore?.status;
 
-    await port.assignPlanningDriver('P-2404', 'A-03', { driverId: 'D-052', driverName: 'نادر عبادی' });
+    await port.assignPlanningDriver('P-2404', 'A-03', {
+      driverId: 'D-052',
+      driverName: 'نادر عبادی',
+    });
     await port.assignPlanningStop('P-2404', 'U-001', 'A-01');
     await port.assignPlanningStop('P-2404', 'U-002', 'A-02');
     await port.recalculatePlanningRoutes('P-2404');
@@ -274,7 +286,10 @@ describe('A03 publish readiness and revision spine', () => {
     expect(published.status).toBe(statusBefore);
     const snapshot = port.getPublishedPlanningState('P-2404')!;
     const publishedDriver = snapshot.areas.find((area) => area.areaId === 'A-01')?.driverId;
-    await port.assignPlanningDriver('P-2404', 'A-01', { driverId: 'D-001', driverName: 'محمد قاسمی' });
+    await port.assignPlanningDriver('P-2404', 'A-01', {
+      driverId: 'D-001',
+      driverName: 'محمد قاسمی',
+    });
     const afterEdit = port.getPublishedPlanningState('P-2404')!;
     expect(afterEdit.areas.find((area) => area.areaId === 'A-01')?.driverId).toBe(publishedDriver);
     expect(port.hasUnpublishedPlanningChanges('P-2404')).toBe(true);
@@ -298,7 +313,9 @@ describe('A03 publish readiness and revision spine', () => {
       status: 'planning_active',
     });
     expect(await screen.findByTestId('execution-map-stub')).toBeInTheDocument();
-    expect(screen.getByRole('link', { current: 'page', name: 'اجرا و پیگیری' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { current: 'page', name: 'اجرا و پیگیری' }),
+    ).toBeInTheDocument();
 
     const publishedPlan = await port.getPlan('P-2404');
     await router.navigate('/plans');
@@ -371,9 +388,7 @@ describe('A03 publish readiness and revision spine', () => {
       await user.click(await screen.findByTestId(`exclude-unassigned-${stopId}`));
     }
     await user.click(screen.getByTestId('recalculate-routes'));
-    await waitFor(() =>
-      expect(screen.queryByTestId('recalculate-routes')).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByTestId('recalculate-routes')).not.toBeInTheDocument());
 
     await user.click(screen.getByTestId('open-publish-plan'));
     expect(screen.getByTestId('publish-ready')).toBeInTheDocument();
@@ -492,7 +507,7 @@ describe('A03 dispatch lookup', () => {
     if (found.kind === 'found') {
       expect(found.areaLabel).toBe('محدوده ۱');
       expect(found.driverName).toBe('کاوه میرزایی');
-      expect(found.phone).toBe('0912-111-0101');
+      expect(found.phone).toBe('09121110101');
       expect(found.phone).not.toContain('10123456');
     }
     expect(lookupDispatchOrder(PLANNING_PLAN_FIXTURE, 'NOPE').kind).toBe('notfound');
@@ -512,7 +527,9 @@ describe('A03 dispatch lookup', () => {
     );
     await user.click(screen.getByTestId('open-dispatch-prep'));
     expect(screen.getByTestId('dispatch-prep-panel')).toBeInTheDocument();
-    fireEvent.change(screen.getByTestId('dispatch-lookup-input'), { target: { value: '10123456' } });
+    fireEvent.change(screen.getByTestId('dispatch-lookup-input'), {
+      target: { value: '10123456' },
+    });
     fireEvent.submit(screen.getByTestId('dispatch-lookup-input').closest('form')!);
     expect(screen.getByTestId('dispatch-found')).toHaveTextContent('محدوده ۱');
     expect(screen.getByTestId('dispatch-found')).toHaveTextContent('کاوه میرزایی');

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 
 import { Icon, ICONS } from '@/features/plans/components/icons';
-import { LtrIso } from '@/shared/ui';
 
 const NAV_ITEMS = [
   { to: '/plans', label: 'برنامه‌ها', icon: ICONS.plans, end: false },
@@ -33,7 +32,12 @@ export function GlobalNavigation({ collapsed, onToggle }: GlobalNavigationProps)
           aria-label={collapsed ? 'باز کردن منو' : 'بستن منو'}
           onClick={onToggle}
         >
-          ر
+          <img
+            className="admin-shell-mark-image"
+            src="/Ravaneh-Icon.png"
+            alt=""
+            aria-hidden="true"
+          />
         </button>
         {!collapsed ? (
           <>
@@ -41,9 +45,7 @@ export function GlobalNavigation({ collapsed, onToggle }: GlobalNavigationProps)
               <div className="text-sm font-bold tracking-tight whitespace-nowrap text-[var(--text-primary)]">
                 روانه
               </div>
-              <LtrIso className="text-[10px] tracking-[0.04em] whitespace-nowrap text-[var(--text-muted)]">
-                RAVANEH
-              </LtrIso>
+
             </div>
             <button
               type="button"

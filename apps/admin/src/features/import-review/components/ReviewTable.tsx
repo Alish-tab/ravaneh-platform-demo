@@ -1,5 +1,6 @@
 import { Icon, ICONS } from '@/features/plans/components/icons';
 import { toPersianDigits } from '@/shared/lib/format';
+import { formatPhoneForDisplay } from '@/shared/lib/phone';
 import { Button, Checkbox, LtrData, StatusBadge } from '@/shared/ui';
 
 import {
@@ -72,7 +73,9 @@ export function ReviewTable({
                 <Checkbox
                   aria-label="انتخاب همه موارد قابل مشاهده"
                   checked={allVisibleChecked}
-                  aria-checked={someVisibleChecked && !allVisibleChecked ? 'mixed' : allVisibleChecked}
+                  aria-checked={
+                    someVisibleChecked && !allVisibleChecked ? 'mixed' : allVisibleChecked
+                  }
                   disabled={tasks.length === 0}
                   onChange={onToggleAllVisible}
                 />
@@ -165,9 +168,11 @@ export function ReviewTable({
                     <td className="font-medium">{task.name}</td>
                     <td>
                       <LtrData
-                        className={task.issues.includes('phone') ? 'text-[var(--warning-text)]' : ''}
+                        className={
+                          task.issues.includes('phone') ? 'text-[var(--warning-text)]' : ''
+                        }
                       >
-                        {task.phone}
+                        {formatPhoneForDisplay(task.phone)}
                       </LtrData>
                     </td>
                     <td className="truncate" title={task.address}>

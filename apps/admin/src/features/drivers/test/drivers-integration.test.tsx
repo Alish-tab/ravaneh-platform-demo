@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createDriversFixturePort } from '@/features/drivers/port/drivers-port';
 import { createPlansFixturePort } from '@/features/plans/fixture/plans-fixture';
 import { PLANNING_DRIVERS } from '@/features/planning/fixture/drivers';
-import { jalaliSortKey, dateToJalali } from '@/features/ops/lib/jalali';
+import { jalaliSortKey, dateToJalali } from '@/shared/date/jalali';
 
 function getTodaySortKey(refDate: Date = new Date()): string {
   return jalaliSortKey(dateToJalali(refDate));

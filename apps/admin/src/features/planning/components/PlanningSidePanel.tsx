@@ -40,6 +40,7 @@ import {
 import { Icon, ICONS } from '@/features/plans/components/icons';
 import { Button, LtrData } from '@/shared/ui';
 import { toPersianDigits } from '@/shared/lib/format';
+import { formatPhoneForDisplay } from '@/shared/lib/phone';
 
 type PlanningSidePanelProps = {
   fixture: PlanningPlanFixture;
@@ -379,8 +380,14 @@ function RoutesListPanel({
 
       <div className="planning-inspector-stats">
         {[
-          { value: toPersianDigits(countPlanStops(fixture) - fixture.unassignedStops.length), label: 'نقطه' },
-          { value: toPersianDigits(countPlanOrders(fixture) - unassignedOrdersTotal), label: 'سفارش' },
+          {
+            value: toPersianDigits(countPlanStops(fixture) - fixture.unassignedStops.length),
+            label: 'نقطه',
+          },
+          {
+            value: toPersianDigits(countPlanOrders(fixture) - unassignedOrdersTotal),
+            label: 'سفارش',
+          },
           { value: toPersianDigits(fixture.areas.length), label: 'محدوده' },
           ...(remainingUnassigned > 0
             ? [{ value: toPersianDigits(remainingUnassigned), label: 'بدون محدوده', warn: true }]
@@ -559,9 +566,7 @@ function UnassignedQueue({
         </span>
       </div>
       {!allResolved ? (
-        <div className="planning-unassigned-note">
-          انتشار تا تعیین‌تکلیف همه سفارش‌ها مسدود است
-        </div>
+        <div className="planning-unassigned-note">انتشار تا تعیین‌تکلیف همه سفارش‌ها مسدود است</div>
       ) : null}
       {stops.map((stop) => {
         const primary = stop.tasks[0];
@@ -593,7 +598,9 @@ function UnassignedQueue({
             }}
           >
             <div className="mb-1 flex items-center gap-1">
-              <LtrData className="text-[9.5px] text-[var(--accent-text)]">#{primary?.orderId}</LtrData>
+              <LtrData className="text-[9.5px] text-[var(--accent-text)]">
+                #{primary?.orderId}
+              </LtrData>
               {stop.tasks.length > 1 ? (
                 <span className="text-[9px] text-[var(--text-muted)]">
                   +{toPersianDigits(stop.tasks.length - 1)} سفارش دیگر
@@ -695,7 +702,10 @@ function RouteDetailPanel({
             محدوده‌ها
           </button>
           <div className="flex items-center gap-1.5">
-            <span className="planning-route-color !h-[9px] !w-[9px]" style={{ background: route.color }} />
+            <span
+              className="planning-route-color !h-[9px] !w-[9px]"
+              style={{ background: route.color }}
+            />
             <div className="min-w-0 flex-1 text-[13px] font-bold text-[var(--text-primary)]">
               {route.label}
             </div>
@@ -717,7 +727,9 @@ function RouteDetailPanel({
           <div className="planning-inspector-stat-label">نقطه</div>
         </div>
         <div className="planning-inspector-stat">
-          <div className="planning-inspector-stat-value !text-base">{toPersianDigits(totalTasks)}</div>
+          <div className="planning-inspector-stat-value !text-base">
+            {toPersianDigits(totalTasks)}
+          </div>
           <div className="planning-inspector-stat-label">سفارش</div>
         </div>
         <div className="planning-inspector-stat">
@@ -734,7 +746,10 @@ function RouteDetailPanel({
         </div>
       </div>
 
-      <div className="border-b border-[var(--border-default)] px-3 py-2.5" data-testid="route-driver-section">
+      <div
+        className="border-b border-[var(--border-default)] px-3 py-2.5"
+        data-testid="route-driver-section"
+      >
         <div className="mb-2 text-[10px] font-semibold tracking-wide text-[var(--text-muted)] uppercase">
           DRIVER
         </div>
@@ -922,7 +937,9 @@ function OrderDetailPanel({
             نقطه تحویل
           </button>
           <div className="text-[10px] text-[var(--text-disabled)]">سفارش</div>
-          <LtrData className="text-[13px] font-bold text-[var(--accent-text)]">#{task.orderId}</LtrData>
+          <LtrData className="text-[13px] font-bold text-[var(--accent-text)]">
+            #{task.orderId}
+          </LtrData>
         </div>
         <button type="button" className="planning-icon-btn" title="بستن پانل" onClick={onClose}>
           <Icon d={ICONS.panel_end} size={14} />
@@ -937,12 +954,14 @@ function OrderDetailPanel({
         <div className="mb-3">
           <div className="mb-1 text-[10px] text-[var(--text-muted)]">تلفن</div>
           <LtrData className="text-[12.5px] text-[var(--text-primary)]" data-testid="order-phone">
-            {task.phone}
+            {formatPhoneForDisplay(task.phone)}
           </LtrData>
         </div>
         <div className="mb-3">
           <div className="mb-1 text-[10px] text-[var(--text-muted)]">آدرس</div>
-          <div className="text-[12.5px] leading-relaxed text-[var(--text-primary)]">{task.address}</div>
+          <div className="text-[12.5px] leading-relaxed text-[var(--text-primary)]">
+            {task.address}
+          </div>
         </div>
         <div className="border-t border-[var(--border-subtle)] pt-2.5">
           <div className="mb-2">
@@ -1034,7 +1053,9 @@ function StopDetailPanel({
         </div>
         <div className="flex flex-col gap-1.5">
           <div className="flex gap-2">
-            <span className="w-[68px] shrink-0 text-[10.5px] text-[var(--text-muted)]">سفارش‌ها</span>
+            <span className="w-[68px] shrink-0 text-[10.5px] text-[var(--text-muted)]">
+              سفارش‌ها
+            </span>
             <span className="text-[11px] text-[var(--text-secondary)]">
               {toPersianDigits(stop.tasks.length)}
             </span>
@@ -1096,7 +1117,9 @@ function StopDetailPanel({
               onClick={() => onSelectOrder(task.orderId)}
             >
               <div className="mb-0.5">
-                <LtrData className="text-[9.5px] text-[var(--accent-text)]">#{task.orderId}</LtrData>
+                <LtrData className="text-[9.5px] text-[var(--accent-text)]">
+                  #{task.orderId}
+                </LtrData>
               </div>
               <div className="text-[12px] font-semibold text-[var(--text-primary)]">
                 {task.recipientName}

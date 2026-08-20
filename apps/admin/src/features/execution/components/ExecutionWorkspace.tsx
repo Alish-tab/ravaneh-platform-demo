@@ -14,7 +14,7 @@ import type {
 } from '@/features/execution/model/types';
 import { Icon, ICONS } from '@/features/plans/components/icons';
 import { toPersianDigits } from '@/shared/lib/format';
-import { Button } from '@/shared/ui';
+import { Button, Toast } from '@/shared/ui';
 
 type ExecutionWorkspaceProps = {
   snapshot: ExecutionSnapshot | null;
@@ -68,6 +68,24 @@ export function ExecutionWorkspace({
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [view, setView] = useState<PanelView>({ kind: 'areas' });
   const [revisionBannerOpen, setRevisionBannerOpen] = useState(true);
+  const [phoneCopyFeedback, setPhoneCopyFeedback] = useState<'success' | 'error' | null>(null);
+  const phoneCopyTimerRef = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (phoneCopyTimerRef.current !== null) window.clearTimeout(phoneCopyTimerRef.current);
+    },
+    [],
+  );
+
+  const showPhoneCopyFeedback = (result: 'success' | 'error') => {
+    if (phoneCopyTimerRef.current !== null) window.clearTimeout(phoneCopyTimerRef.current);
+    setPhoneCopyFeedback(result);
+    phoneCopyTimerRef.current = window.setTimeout(() => {
+      setPhoneCopyFeedback(null);
+      phoneCopyTimerRef.current = null;
+    }, 3000);
+  };
 
   // Deep-link: if opened from A05 search with ?orderId, search and open the order once ready.
   const deepLinkRef = useRef(initialOrderId);
@@ -187,6 +205,19 @@ export function ExecutionWorkspace({
         </div>
       ) : null}
 
+      {phoneCopyFeedback ? (
+        <div className="execution-copy-toast">
+          <Toast
+            tone={phoneCopyFeedback}
+            title={
+              phoneCopyFeedback === 'success'
+                ? 'شماره تلفن کپی شد'
+                : 'کپی شماره تلفن ناموفق بود'
+            }
+          />
+        </div>
+      ) : null}
+
       {snapshot?.hasUnpublishedWorkingRevision && revisionBannerOpen ? (
         <div className="execution-banner warning" role="status">
           <Icon d={ICONS.info} size={12} />
@@ -248,6 +279,7 @@ export function ExecutionWorkspace({
             onClose={() => setPanelOpen(false)}
             searchOrder={searchOrder}
             saveFollowupNote={saveFollowupNote}
+            onPhoneCopyResult={showPhoneCopyFeedback}
           />
         ) : null}
 

@@ -18,7 +18,7 @@ import {
   dateToJalali,
   relativeDayLabel,
   type JalaliDate,
-} from '@/features/ops/lib/jalali';
+} from '@/shared/date/jalali';
 import { createOpsHomePort } from '@/features/ops/port/ops-port';
 import { createExecutionTestPort } from '@/features/execution/data/fixture-port';
 import { createPlansFixturePort } from '@/features/plans/fixture/plans-fixture';

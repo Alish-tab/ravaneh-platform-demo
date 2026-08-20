@@ -39,6 +39,7 @@ import { A01_DEMO_PLANS, FIXTURE_REFERENCE_DATE } from '@/features/plans/fixture
 import { createFrontendDemoDataForImportedPlan } from '@/features/plans/fixture/bootstrap-imported-plan';
 import { normalizePlanViewModel, type PlanFixtureSeed } from '@/features/plans/normalize-plan';
 import { toServiceDateSortKey } from '@/features/plans/plan-name';
+import { normalizePhone } from '@/shared/lib/phone';
 import { lookupDispatchOrder } from '@/features/planning/fixture/dispatch-lookup';
 import {
   assignDriverToRoute as applyAssignDriver,
@@ -81,9 +82,7 @@ export class PlanningPublishBlockedError extends Error {
 }
 
 export type UploadInspectResult =
-  | { kind: 'ok' }
-  | { kind: 'fail-upload' }
-  | { kind: 'structural'; error: A01StructuralErrorKind };
+  { kind: 'ok' } | { kind: 'fail-upload' } | { kind: 'structural'; error: A01StructuralErrorKind };
 
 export type PlansDataPort = {
   subscribe: (listener: () => void) => () => void;
@@ -176,15 +175,9 @@ export type PlansDataPort = {
     stopId: string,
     coords: PlanningLatLng,
   ) => Promise<PlanningPlanFixture>;
-  setPlanningExcludedOrders: (
-    planId: string,
-    orderIds: string[],
-  ) => Promise<PlanningPlanFixture>;
+  setPlanningExcludedOrders: (planId: string, orderIds: string[]) => Promise<PlanningPlanFixture>;
   getPlanningPublishReadiness: (planId: string) => PlanningPublishReadiness;
-  publishPlanning: (
-    planId: string,
-    working: PlanningPlanFixture,
-  ) => Promise<A01PlanViewModel>;
+  publishPlanning: (planId: string, working: PlanningPlanFixture) => Promise<A01PlanViewModel>;
   lookupPlanningDispatch: (planId: string, query: string) => PlanningDispatchResult;
   hasUnpublishedPlanningChanges: (planId: string) => boolean;
   setPlanningRebuildLock: (planId: string, locked: boolean) => void;
@@ -313,10 +306,7 @@ export function createPlansFixturePort(options?: {
   const visiblePlanning = (planId: string): PlanningPlanFixture => {
     const plan = requirePlan(planId);
     const store = ensurePlanningStore(planId);
-    if (
-      plan.a01Mode === 'published-readonly' ||
-      plan.a01Mode === 'completed-readonly'
-    ) {
+    if (plan.a01Mode === 'published-readonly' || plan.a01Mode === 'completed-readonly') {
       return structuredClone(store.published ?? store.working);
     }
     return structuredClone(store.working);
@@ -355,7 +345,11 @@ export function createPlansFixturePort(options?: {
     if (store.published) unpublishedPlanning.add(planId);
   };
 
-  const applyUpstreamSpatial = (planId: string, orderId: string, coords?: { lat: number; lng: number }) => {
+  const applyUpstreamSpatial = (
+    planId: string,
+    orderId: string,
+    coords?: { lat: number; lng: number },
+  ) => {
     const store = planningStores.get(planId);
     if (!store || store.working.generationPhase !== 'generated') return;
     let foundAreaId: string | null = null;
@@ -432,11 +426,7 @@ export function createPlansFixturePort(options?: {
     const index = store.working.findIndex((item) => item.reviewItemId === reviewItemId);
     if (index < 0) throw new Error('REVIEW_ITEM_NOT_FOUND');
     const next = update(store.working[index]!);
-    store.working = [
-      ...store.working.slice(0, index),
-      next,
-      ...store.working.slice(index + 1),
-    ];
+    store.working = [...store.working.slice(0, index), next, ...store.working.slice(index + 1)];
     return structuredClone(next);
   };
 
@@ -605,9 +595,7 @@ export function createPlansFixturePort(options?: {
       }
       const current = plans.find((plan) => plan.id === id);
       if (!current) throw new Error('PLAN_NOT_FOUND');
-      const nextBatch = batch
-        ? { ...batch, id: batch.id || `IB-${batchSeq++}` }
-        : undefined;
+      const nextBatch = batch ? { ...batch, id: batch.id || `IB-${batchSeq++}` } : undefined;
       const importBatches = nextBatch
         ? [...current.importBatches, nextBatch]
         : current.importBatches;
@@ -702,14 +690,16 @@ export function createPlansFixturePort(options?: {
       if (values.name.trim() === REVIEW_FIXTURE_FAILURE_VALUE) {
         throw new Error('REVIEW_SAVE_FAILED');
       }
-      const previous = ensureReviewStore(planId).working.find((item) => item.reviewItemId === reviewItemId);
+      const previous = ensureReviewStore(planId).working.find(
+        (item) => item.reviewItemId === reviewItemId,
+      );
       const next = mutateWorkingItem(planId, reviewItemId, (item) => {
         const phoneValid = /^09\d{9}$/.test(values.phone.replace(/\D/g, ''));
         const issues = phoneValid ? item.issues.filter((issue) => issue !== 'phone') : item.issues;
         return {
           ...item,
           name: values.name,
-          phone: values.phone,
+          phone: normalizePhone(values.phone),
           address: values.address,
           issues,
           state: item.state === 'excluded' ? 'excluded' : stateFromIssues(issues),
@@ -750,9 +740,7 @@ export function createPlansFixturePort(options?: {
     async excludeReviewItems(planId, reviewItemIds) {
       await guardReviewMutation();
       const { store } = requireMutableReview(planId);
-      const failedIds = nextBulkPartialFailure
-        ? reviewItemIds.slice(-1)
-        : ([] as string[]);
+      const failedIds = nextBulkPartialFailure ? reviewItemIds.slice(-1) : ([] as string[]);
       nextBulkPartialFailure = false;
       const failed = new Set(failedIds);
       const succeededIds = reviewItemIds.filter((id) => !failed.has(id));
@@ -767,9 +755,7 @@ export function createPlansFixturePort(options?: {
     async restoreReviewItems(planId, reviewItemIds) {
       await guardReviewMutation();
       const { store } = requireMutableReview(planId);
-      const failedIds = nextBulkPartialFailure
-        ? reviewItemIds.slice(-1)
-        : ([] as string[]);
+      const failedIds = nextBulkPartialFailure ? reviewItemIds.slice(-1) : ([] as string[]);
       nextBulkPartialFailure = false;
       const failed = new Set(failedIds);
       const succeededIds: string[] = [];
@@ -972,7 +958,10 @@ export function createPlansFixturePort(options?: {
       store.working = result.fixture;
       markPlanningEdited(planId);
       emit();
-      return { fixture: structuredClone(result.fixture), destinationStopId: result.destinationStopId };
+      return {
+        fixture: structuredClone(result.fixture),
+        destinationStopId: result.destinationStopId,
+      };
     },
 
     async updatePlanningStopLocation(planId, stopId, coords) {
@@ -1157,7 +1146,10 @@ export function statusAfterParse(outcome: 'clean' | 'needs_review'): A01Presenta
   return outcome === 'clean' ? 'ready' : 'review';
 }
 
-export function parsedBatchFromFile(fileName: string, outcome: 'clean' | 'needs_review'): ImportBatchViewModel {
+export function parsedBatchFromFile(
+  fileName: string,
+  outcome: 'clean' | 'needs_review',
+): ImportBatchViewModel {
   const file = buildParsedImportedFile({ fileName, outcome });
   return {
     id: `IB-${fileName}`,

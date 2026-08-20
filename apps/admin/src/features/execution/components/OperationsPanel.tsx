@@ -22,6 +22,7 @@ import type {
 } from '@/features/execution/model/types';
 import { Icon, ICONS } from '@/features/plans/components/icons';
 import { toPersianDigits } from '@/shared/lib/format';
+import { formatPhoneForDisplay, normalizePhone } from '@/shared/lib/phone';
 import { LtrData } from '@/shared/ui';
 
 type OperationsPanelProps = {
@@ -33,31 +34,40 @@ type OperationsPanelProps = {
   onClose: () => void;
   searchOrder: (query: string) => Promise<ExecutionOrder | null>;
   saveFollowupNote: (orderId: string, note: string) => Promise<ExecutionFollowupNote>;
+  onPhoneCopyResult: (result: 'success' | 'error') => void;
 };
 
 function StatusPill({ status }: { status: ExecutionUiStatus }) {
   return <span className={`execution-pill ${status}`}>{UI_STATUS_LABEL[status]}</span>;
 }
 
-function CopyPhoneButton({ phone }: { phone: string }) {
-  const [failed, setFailed] = useState(false);
-
+function CopyPhoneButton({
+  phone,
+  onCopyResult,
+}: {
+  phone: string;
+  onCopyResult: (result: 'success' | 'error') => void;
+}) {
   const copy = async () => {
-    setFailed(false);
     try {
-      await navigator.clipboard.writeText(phone);
+      await navigator.clipboard.writeText(normalizePhone(phone));
+      onCopyResult('success');
     } catch {
-      setFailed(true);
+      onCopyResult('error');
     }
   };
 
   return (
     <span className="inline-flex items-center gap-1.5">
-      <LtrData className="text-[12.5px] font-semibold">{phone}</LtrData>
-      <button type="button" className="btn btn-ghost btn-icon" aria-label="کپی شماره تلفن" onClick={() => void copy()}>
+      <LtrData className="text-[12.5px] font-semibold">{formatPhoneForDisplay(phone)}</LtrData>
+      <button
+        type="button"
+        className="btn btn-ghost btn-icon"
+        aria-label="کپی شماره تلفن"
+        onClick={() => void copy()}
+      >
         <Icon d={ICONS.copy} size={11} />
       </button>
-      {failed ? <span className="execution-copy-failed">کپی نشد</span> : null}
     </span>
   );
 }
@@ -69,6 +79,7 @@ function FollowupDetailView({
   driverName,
   notes,
   onSave,
+  onPhoneCopyResult,
 }: {
   order: ExecutionOrder;
   areaName: string;
@@ -76,6 +87,7 @@ function FollowupDetailView({
   driverName: string;
   notes: ExecutionFollowupNote[];
   onSave: (note: string) => Promise<ExecutionFollowupNote>;
+  onPhoneCopyResult: (result: 'success' | 'error') => void;
 }) {
   const [noteText, setNoteText] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -97,7 +109,7 @@ function FollowupDetailView({
 
   return (
     <div>
-      <div className="border-b border-[var(--border-subtle)] px-3 pb-3 pt-2.5">
+      <div className="border-b border-[var(--border-subtle)] px-3 pt-2.5 pb-3">
         <div className="mb-0.5 text-[10px] text-[var(--text-muted)]">سفارش</div>
         <div className="mb-2.5 text-[18px] font-bold">
           <LtrData>#{order.id}</LtrData>
@@ -109,7 +121,7 @@ function FollowupDetailView({
         <div className="execution-kv">
           <span className="execution-kv-key">تلفن</span>
           <span className="execution-kv-val">
-            <CopyPhoneButton phone={order.phone} />
+            <CopyPhoneButton phone={order.phone} onCopyResult={onPhoneCopyResult} />
           </span>
         </div>
         <div className="execution-kv">
@@ -130,12 +142,16 @@ function FollowupDetailView({
         </div>
         <div className="execution-kv">
           <span className="execution-kv-key">علت عدم تحویل</span>
-          <span className="execution-kv-val text-[#c99035]">{failureReasonLabel(order.failureReasonCode)}</span>
+          <span className="execution-kv-val text-[#c99035]">
+            {failureReasonLabel(order.failureReasonCode)}
+          </span>
         </div>
         {order.driverNote ? (
           <div className="execution-kv">
             <span className="execution-kv-key">یادداشت راننده</span>
-            <span className="execution-kv-val italic text-[var(--text-secondary)]">{order.driverNote}</span>
+            <span className="execution-kv-val text-[var(--text-secondary)] italic">
+              {order.driverNote}
+            </span>
           </div>
         ) : null}
         <div className="execution-kv">
@@ -174,7 +190,10 @@ function FollowupDetailView({
               void handleSave();
             }}
           >
-            <label className="mb-1 block text-[10.5px] font-medium text-[var(--text-muted)]" htmlFor="followup-note">
+            <label
+              className="mb-1 block text-[10.5px] font-medium text-[var(--text-muted)]"
+              htmlFor="followup-note"
+            >
               یادداشت پیگیری
             </label>
             <textarea
@@ -189,7 +208,10 @@ function FollowupDetailView({
               }}
             />
             {saveState === 'failed' ? (
-              <div className="mt-1 flex items-center gap-1 text-[10.5px] text-[#c44444]" role="alert">
+              <div
+                className="mt-1 flex items-center gap-1 text-[10.5px] text-[#c44444]"
+                role="alert"
+              >
                 <Icon d={ICONS.error_x} size={10} />
                 خطا در ثبت. یادداشت حفظ شده است.
               </div>
@@ -223,7 +245,9 @@ function FollowupDetailView({
         <div className="flex items-center gap-1.5 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1.5">
           <span className="text-[10.5px] font-semibold text-[var(--text-muted)]">سابقه پیگیری</span>
           {orderNotes.length > 0 ? (
-            <span className="text-[10px] text-[var(--text-disabled)]">{toPersianDigits(orderNotes.length)}</span>
+            <span className="text-[10px] text-[var(--text-disabled)]">
+              {toPersianDigits(orderNotes.length)}
+            </span>
           ) : null}
         </div>
         {orderNotes.length === 0 ? (
@@ -232,12 +256,21 @@ function FollowupDetailView({
           </div>
         ) : (
           orderNotes.map((note) => (
-            <div key={note.id} className="border-b border-[var(--border-subtle)] px-2.5 py-1.5 last:border-b-0">
+            <div
+              key={note.id}
+              className="border-b border-[var(--border-subtle)] px-2.5 py-1.5 last:border-b-0"
+            >
               <div className="mb-0.5 flex items-baseline gap-1">
-                <span className="text-[11px] font-semibold text-[var(--text-secondary)]">{note.adminName}</span>
-                <LtrData className="ms-auto text-[10px] text-[var(--text-disabled)]">{note.timestampLabel}</LtrData>
+                <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
+                  {note.adminName}
+                </span>
+                <LtrData className="ms-auto text-[10px] text-[var(--text-disabled)]">
+                  {note.timestampLabel}
+                </LtrData>
               </div>
-              <div className="text-[11.5px] leading-relaxed text-[var(--text-primary)]">{note.note}</div>
+              <div className="text-[11.5px] leading-relaxed text-[var(--text-primary)]">
+                {note.note}
+              </div>
             </div>
           ))
         )}
@@ -255,6 +288,7 @@ export function OperationsPanel({
   onClose,
   searchOrder,
   saveFollowupNote,
+  onPhoneCopyResult,
 }: OperationsPanelProps) {
   const [filter, setFilter] = useState<AreaFilter>('all');
   const [searchVal, setSearchVal] = useState('');
@@ -262,7 +296,8 @@ export function OperationsPanel({
 
   const areas = deriveAreas(snapshot);
   const followups = followupOrders(snapshot);
-  const panelTab = view.kind === 'followup-list' || view.kind === 'followup-detail' ? 'followup' : 'areas';
+  const panelTab =
+    view.kind === 'followup-list' || view.kind === 'followup-detail' ? 'followup' : 'areas';
   const showBack = view.kind !== 'areas' && view.kind !== 'followup-list';
 
   const backLabel = (() => {
@@ -273,7 +308,9 @@ export function OperationsPanel({
     }
     if (view.kind === 'order-detail') {
       if (!view.backLocationId) return 'محدوده‌ها';
-      return snapshot.locations.find((item) => item.id === view.backLocationId)?.address ?? 'نقطه تحویل';
+      return (
+        snapshot.locations.find((item) => item.id === view.backLocationId)?.address ?? 'نقطه تحویل'
+      );
     }
     if (view.kind === 'not-found') return 'محدوده‌ها';
     if (view.kind === 'followup-detail') return 'نیازمند پیگیری';
@@ -355,7 +392,9 @@ export function OperationsPanel({
     const loc = snapshot.locations.find((candidate) => candidate.id === item.locationId);
     return (
       <div className="px-3 py-3">
-        {showTitle ? <div className="mb-0.5 text-[10px] text-[var(--text-muted)]">سفارش</div> : null}
+        {showTitle ? (
+          <div className="mb-0.5 text-[10px] text-[var(--text-muted)]">سفارش</div>
+        ) : null}
         <div className="mb-3 text-[18px] font-bold">
           <LtrData>#{item.id}</LtrData>
         </div>
@@ -367,7 +406,7 @@ export function OperationsPanel({
           <div className="execution-kv">
             <span className="execution-kv-key">تلفن</span>
             <span className="execution-kv-val">
-              <CopyPhoneButton phone={item.phone} />
+              <CopyPhoneButton phone={item.phone} onCopyResult={onPhoneCopyResult} />
             </span>
           </div>
           <div className="execution-kv">
@@ -456,10 +495,16 @@ export function OperationsPanel({
                 style={{ background: area.color }}
                 aria-hidden
               />
-              <span className="flex-1 text-[12.5px] font-semibold text-[var(--text-primary)]">{area.name}</span>
-              <span className={`execution-pill ${area.execState}`}>{AREA_EXEC_STATE_LABEL[area.execState]}</span>
+              <span className="flex-1 text-[12.5px] font-semibold text-[var(--text-primary)]">
+                {area.name}
+              </span>
+              <span className={`execution-pill ${area.execState}`}>
+                {AREA_EXEC_STATE_LABEL[area.execState]}
+              </span>
             </div>
-            <div className="mb-1 ps-[13px] text-[11.5px] text-[var(--text-secondary)]">{area.driverName}</div>
+            <div className="mb-1 ps-[13px] text-[11.5px] text-[var(--text-secondary)]">
+              {area.driverName}
+            </div>
             <div className="ps-[13px] text-[11px] leading-relaxed text-[var(--text-muted)]">
               <span>{toPersianDigits(area.total)} سفارش</span>
               <span className="mx-1.5 text-[var(--border-default)]">·</span>
@@ -490,9 +535,15 @@ export function OperationsPanel({
       <div>
         <div className="border-b border-[var(--border-subtle)] px-3 py-3">
           <div className="mb-1.5 flex items-center gap-1.5">
-            <span className="size-2 shrink-0 rounded-full" style={{ background: area.color }} aria-hidden />
+            <span
+              className="size-2 shrink-0 rounded-full"
+              style={{ background: area.color }}
+              aria-hidden
+            />
             <span className="flex-1 text-sm font-bold">{area.name}</span>
-            <span className={`execution-pill ${area.execState}`}>{AREA_EXEC_STATE_LABEL[area.execState]}</span>
+            <span className={`execution-pill ${area.execState}`}>
+              {AREA_EXEC_STATE_LABEL[area.execState]}
+            </span>
           </div>
           <div className="mb-2.5 flex items-center gap-1.5 ps-[15px] text-[11.5px] text-[var(--text-secondary)]">
             <Icon d={ICONS.person} size={11} />
@@ -506,7 +557,7 @@ export function OperationsPanel({
               { label: 'در انتظار', value: area.pending, color: 'var(--text-secondary)' },
             ].map((stat) => (
               <div key={stat.label}>
-                <div className="text-[15px] font-bold leading-tight" style={{ color: stat.color }}>
+                <div className="text-[15px] leading-tight font-bold" style={{ color: stat.color }}>
                   {toPersianDigits(stat.value)}
                 </div>
                 <div className="text-[10.5px] text-[var(--text-muted)]">{stat.label}</div>
@@ -524,7 +575,9 @@ export function OperationsPanel({
         </div>
         <div className="flex items-center gap-1.5 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1.5">
           <span className="flex-1 text-[10.5px] text-[var(--text-muted)]">نقاط تحویل</span>
-          <span className="text-[10px] text-[var(--text-muted)]">{toPersianDigits(locs.length)}</span>
+          <span className="text-[10px] text-[var(--text-muted)]">
+            {toPersianDigits(locs.length)}
+          </span>
         </div>
         {locs.map((loc) => {
           const orders = locationOrders(snapshot, loc.id);
@@ -538,7 +591,9 @@ export function OperationsPanel({
               onClick={() => onViewChange({ kind: 'location-detail', locationId: loc.id })}
             >
               <div className="mb-0.5 flex items-center gap-1.5">
-                <span className="flex-1 truncate text-xs text-[var(--text-primary)]">{loc.address}</span>
+                <span className="flex-1 truncate text-xs text-[var(--text-primary)]">
+                  {loc.address}
+                </span>
                 <Icon d={ICONS.chevron_l} size={11} />
               </div>
               <div className="flex gap-1.5 text-[10.5px] text-[var(--text-muted)]">
@@ -571,7 +626,7 @@ export function OperationsPanel({
     return (
       <div data-testid="execution-location-detail" data-order-count={String(orders.length)}>
         <div className="border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2.5">
-          <div className="mb-1 text-[12.5px] font-semibold leading-snug">{loc.address}</div>
+          <div className="mb-1 text-[12.5px] leading-snug font-semibold">{loc.address}</div>
           <div className="flex flex-wrap gap-1.5 text-[11px] text-[var(--text-secondary)]">
             <span style={{ color: area?.color }}>{area?.name}</span>
             <span className="text-[var(--border-default)]">·</span>
@@ -588,14 +643,20 @@ export function OperationsPanel({
                 type="button"
                 className="execution-order-row flex items-center gap-2"
                 onClick={() =>
-                  onViewChange({ kind: 'order-detail', orderId: item.id, backLocationId: locationId })
+                  onViewChange({
+                    kind: 'order-detail',
+                    orderId: item.id,
+                    backLocationId: locationId,
+                  })
                 }
               >
                 <div className="min-w-0 flex-1">
                   <div className="mb-0.5 text-xs">
                     <LtrData>#{item.id}</LtrData>
                   </div>
-                  <div className="truncate text-[11.5px] text-[var(--text-secondary)]">{item.recipient}</div>
+                  <div className="truncate text-[11.5px] text-[var(--text-secondary)]">
+                    {item.recipient}
+                  </div>
                 </div>
                 <StatusPill status={item.uiStatus} />
                 <Icon d={ICONS.chevron_l} size={11} />
@@ -626,7 +687,9 @@ export function OperationsPanel({
             <div className="mb-0.5 flex items-center gap-1">
               <span className="text-xs font-medium">{item.recipient}</span>
               <span className="text-[10px] text-[var(--border-default)]">·</span>
-              <LtrData className="text-[11px] text-[var(--text-secondary)]">{item.phone}</LtrData>
+              <LtrData className="text-[11px] text-[var(--text-secondary)]">
+                {formatPhoneForDisplay(item.phone)}
+              </LtrData>
             </div>
             <div className="flex flex-wrap items-center gap-1">
               <span className="text-[10.5px]" style={{ color: area?.color }}>
@@ -635,7 +698,9 @@ export function OperationsPanel({
               <span className="text-[10px] text-[var(--border-default)]">·</span>
               <span className="text-[10.5px] text-[var(--text-muted)]">{area?.driverName}</span>
               <span className="text-[10px] text-[var(--border-default)]">·</span>
-              <span className="text-[10.5px] text-[#c99035]">{failureReasonLabel(item.failureReasonCode)}</span>
+              <span className="text-[10.5px] text-[#c99035]">
+                {failureReasonLabel(item.failureReasonCode)}
+              </span>
               {noteCount > 0 ? (
                 <span className="ms-auto rounded-[var(--r-xs)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-1 text-[9.5px] text-[var(--text-muted)]">
                   {toPersianDigits(noteCount)}
@@ -648,7 +713,6 @@ export function OperationsPanel({
     </div>
   );
 
-
   const orderForDetail =
     view.kind === 'order-detail'
       ? snapshot.orders.find((item) => item.id === view.orderId)
@@ -658,7 +722,9 @@ export function OperationsPanel({
     view.kind === 'followup-detail'
       ? snapshot.orders.find((item) => item.id === view.orderId)
       : undefined;
-  const followupArea = followupOrder ? areas.find((item) => item.id === followupOrder.areaId) : undefined;
+  const followupArea = followupOrder
+    ? areas.find((item) => item.id === followupOrder.areaId)
+    : undefined;
 
   return (
     <aside className="execution-panel" data-testid="execution-panel" aria-label="پنل عملیات">
@@ -685,12 +751,22 @@ export function OperationsPanel({
               </span>
             ) : null}
             {searchVal && !isSearching ? (
-              <button type="button" className="execution-search-clear" aria-label="پاک کردن جستجو" onClick={clearSearch}>
+              <button
+                type="button"
+                className="execution-search-clear"
+                aria-label="پاک کردن جستجو"
+                onClick={clearSearch}
+              >
                 <Icon d={ICONS.close} size={10} />
               </button>
             ) : null}
           </div>
-          <button type="button" className="btn btn-ghost btn-icon" aria-label="بستن پنل عملیات" onClick={onClose}>
+          <button
+            type="button"
+            className="btn btn-ghost btn-icon"
+            aria-label="بستن پنل عملیات"
+            onClick={onClose}
+          >
             <Icon d={ICONS.panel_end} size={14} />
           </button>
         </div>
@@ -742,6 +818,7 @@ export function OperationsPanel({
             driverName={followupArea?.driverName ?? ''}
             notes={snapshot.notes.filter((note) => note.orderId === followupOrder.id)}
             onSave={(note) => saveFollowupNote(followupOrder.id, note)}
+            onPhoneCopyResult={onPhoneCopyResult}
           />
         ) : null}
         {view.kind === 'not-found' ? (

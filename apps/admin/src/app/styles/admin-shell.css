@@ -47,11 +47,20 @@
   font-weight: 700;
   line-height: 1;
   border: none;
+  padding: 0;
+  overflow: hidden;
   cursor: pointer;
   font-family: var(--font-primary);
   transition:
     opacity 0.15s,
     box-shadow 0.15s;
+}
+
+.admin-shell-mark-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .admin-shell-mark:hover {

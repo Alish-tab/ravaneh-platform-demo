@@ -4,6 +4,7 @@
  */
 
 import type { A01PlanViewModel } from '@/features/plans/a01-types';
+import { normalizePhone } from '@/shared/lib/phone';
 import { toReviewTask } from '@/features/import-review/review-model';
 import type {
   ReviewItem,
@@ -48,7 +49,7 @@ function item(seed: ReviewItemSeed): ReviewItem {
     externalOrderId: seed.externalOrderId ?? seed.reviewItemId,
     importBatchId: seed.importBatchId ?? 'IB-P-2405-latest',
     name: seed.name,
-    phone: seed.phone,
+    phone: normalizePhone(seed.phone),
     address: seed.address,
     rawCustomerName: seed.rawCustomerName ?? seed.name,
     rawPhone: seed.rawPhone,
@@ -57,7 +58,8 @@ function item(seed: ReviewItemSeed): ReviewItem {
     rawLongitude: seed.rawLongitude,
     resolvedLat,
     resolvedLng,
-    locSource: seed.locSource ?? (resolvedLat !== null && resolvedLng !== null ? 'source_coords' : null),
+    locSource:
+      seed.locSource ?? (resolvedLat !== null && resolvedLng !== null ? 'source_coords' : null),
     issues: seed.issues,
     state: seed.state,
     overlay: null,
@@ -73,7 +75,7 @@ export const P2405_REVIEW_ITEMS: ReviewItem[] = [
   item({
     reviewItemId: 'D-1044',
     name: 'علی حسینی',
-    phone: '0912-777-3421',
+    phone: '09127773421',
     address: 'آزادی، پلاک ۲۱۴',
     rawPhone: '09127773421',
     rawAddress: 'خ آزادی پلاک 214',
@@ -91,7 +93,7 @@ export const P2405_REVIEW_ITEMS: ReviewItem[] = [
   item({
     reviewItemId: 'D-1046',
     name: 'رضا احمدی',
-    phone: '0912-660-2277',
+    phone: '09126602277',
     address: 'انقلاب، پلاک ۶۷',
     rawPhone: '09126602277',
     rawAddress: 'خ انقلاب پلاک 67',
@@ -108,7 +110,7 @@ export const P2405_REVIEW_ITEMS: ReviewItem[] = [
   item({
     reviewItemId: 'D-1047',
     name: 'نگین کریمی',
-    phone: '021-88-1234',
+    phone: '021881234',
     address: 'سعدآباد، پلاک ۵',
     rawPhone: '02188001234',
     rawAddress: 'خ سعدآباد پلاک 5',
@@ -127,14 +129,14 @@ export const P2405_REVIEW_ITEMS: ReviewItem[] = [
     reviewItemId: 'D-1048',
     externalOrderId: 'D-1048',
     name: 'امیر زاهدی',
-    phone: '0935-400-9988',
+    phone: '09354009988',
     address: 'شریعتی، پلاک ۱۲۹',
     rawPhone: '09354009988',
     rawAddress: 'خ شریعتی پلاک 129',
     rawLatitude: '35.7355',
     rawLongitude: '51.4250',
     resolvedLat: 35.7355,
-    resolvedLng: 51.4250,
+    resolvedLng: 51.425,
     locSource: 'source_coords',
     issues: ['dup_order_id'],
     state: 'review',
@@ -144,7 +146,7 @@ export const P2405_REVIEW_ITEMS: ReviewItem[] = [
     reviewItemId: 'D-1048-b',
     externalOrderId: 'D-1048',
     name: 'امیر زاهدی',
-    phone: '0935-400-9988',
+    phone: '09354009988',
     address: 'شریعتی، پلاک ۱۲۹ — ردیف دوم واردات',
     rawCustomerName: 'امیر زاهدی',
     rawPhone: '09354009988',
@@ -152,7 +154,7 @@ export const P2405_REVIEW_ITEMS: ReviewItem[] = [
     rawLatitude: '35.7355',
     rawLongitude: '51.4250',
     resolvedLat: 35.7355,
-    resolvedLng: 51.4250,
+    resolvedLng: 51.425,
     locSource: 'source_coords',
     issues: ['dup_order_id'],
     state: 'review',
@@ -161,14 +163,14 @@ export const P2405_REVIEW_ITEMS: ReviewItem[] = [
   item({
     reviewItemId: 'D-1053',
     name: 'لیلا احمدی',
-    phone: '0935-771-4488',
+    phone: '09357714488',
     address: 'جردن، پلاک ۲',
     rawPhone: '09357714488',
     rawAddress: 'خ جردن پلاک 2',
     rawLatitude: '35.7638',
     rawLongitude: '51.3500',
     resolvedLat: 35.7638,
-    resolvedLng: 51.3500,
+    resolvedLng: 51.35,
     locSource: 'source_coords',
     issues: ['loc_mismatch'],
     state: 'review',
@@ -180,7 +182,7 @@ export const P2405_REVIEW_ITEMS: ReviewItem[] = [
   item({
     reviewItemId: 'D-1056',
     name: 'کامران نوری',
-    phone: '021-22-3344',
+    phone: '021223344',
     address: 'نواب، پلاک ۱۱',
     rawPhone: '09122345678',
     rawAddress: 'خ نواب پلاک 11',
@@ -197,7 +199,7 @@ export const P2405_REVIEW_ITEMS: ReviewItem[] = [
   item({
     reviewItemId: 'D-1042',
     name: 'صادق رضایی',
-    phone: '0912-341-5678',
+    phone: '09123415678',
     address: 'ولیعصر، پلاک ۸۷',
     rawPhone: '09123415678',
     rawAddress: 'خ ولیعصر پلاک 87',
@@ -213,7 +215,7 @@ export const P2405_REVIEW_ITEMS: ReviewItem[] = [
   item({
     reviewItemId: 'D-1045',
     name: 'مریم صادقی',
-    phone: '0935-210-8843',
+    phone: '09352108843',
     address: 'کشاورز، پلاک ۳۳',
     rawPhone: '09352108843',
     rawAddress: 'بلوار کشاورز پلاک 33',
@@ -229,14 +231,14 @@ export const P2405_REVIEW_ITEMS: ReviewItem[] = [
   item({
     reviewItemId: 'D-1055',
     name: 'پریسا موسوی',
-    phone: '0912-600-7722',
+    phone: '09126007722',
     address: 'دماوند، پلاک ۳۸',
     rawPhone: '09126007722',
     rawAddress: 'خ دماوند پلاک 38',
     rawLatitude: '35.7501',
     rawLongitude: '51.5100',
     resolvedLat: 35.7501,
-    resolvedLng: 51.5100,
+    resolvedLng: 51.51,
     locSource: 'source_coords',
     issues: [],
     state: 'excluded',
@@ -271,7 +273,9 @@ function readOnlySample(planId: string): ReviewItem[] {
   ];
 }
 
-export function createReviewStoreForPlan(plan: Pick<A01PlanViewModel, 'id' | 'itemCount' | 'a01Mode' | 'publishedSnapshot'>): ReviewPlanStore {
+export function createReviewStoreForPlan(
+  plan: Pick<A01PlanViewModel, 'id' | 'itemCount' | 'a01Mode' | 'publishedSnapshot'>,
+): ReviewPlanStore {
   if (plan.itemCount === 0) {
     return { working: [], published: null };
   }

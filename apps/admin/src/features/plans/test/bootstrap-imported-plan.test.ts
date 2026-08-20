@@ -9,6 +9,8 @@ import {
 } from '@/features/plans/fixture/plans-fixture';
 import { PLANNING_DRIVERS } from '@/features/planning/fixture/drivers';
 import { createTestPort, renderApp } from '@/features/plans/test/render';
+import { dateToJalali, JALALI_MONTHS } from '@/shared/date/jalali';
+import { toPersianDigits } from '@/shared/lib/format';
 
 function excelFile(name: string) {
   return new File(['fixture workbook boundary'], name, {
@@ -42,7 +44,13 @@ describe('frontend imported-plan demo bootstrap', () => {
 
     await screen.findByText('هنوز برنامه‌ای وجود ندارد');
     await user.click(screen.getAllByRole('button', { name: /برنامه جدید/ })[0]!);
-    await user.type(screen.getByLabelText(/تاریخ تحویل/), '۱۴۰۵/۰۶/۱۰');
+    const today = dateToJalali(new Date());
+    await user.click(screen.getByLabelText(/تاریخ تحویل/));
+    await user.click(
+      await screen.findByRole('button', {
+        name: `${toPersianDigits(10)} ${JALALI_MONTHS[today[1] - 1]}`,
+      }),
+    );
     await user.click(screen.getByRole('button', { name: 'ایجاد برنامه' }));
 
     await screen.findByRole('heading', { name: 'داده‌های برنامه' });

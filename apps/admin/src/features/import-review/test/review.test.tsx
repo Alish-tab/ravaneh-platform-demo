@@ -366,7 +366,7 @@ describe('Review shell', () => {
 
   it('edits current information without mutating raw values and keeps input on failure', async () => {
     const user = userEvent.setup();
-    renderApp('/plans/P-2405/review');
+    const { port } = renderApp('/plans/P-2405/review');
     await screen.findByText('اطلاعات گیرنده');
     await user.click(screen.getByRole('button', { name: 'ویرایش اطلاعات' }));
     const name = screen.getByRole('textbox', { name: 'نام گیرنده' });
@@ -378,11 +378,17 @@ describe('Review shell', () => {
 
     await user.clear(name);
     await user.type(name, 'علی حسینی ویرایش‌شده');
+    const phone = screen.getByRole('textbox', { name: 'شماره تماس' });
+    await user.clear(phone);
+    await user.type(phone, '0912-341-5678');
     await user.click(screen.getByRole('button', { name: 'ذخیره اطلاعات' }));
     await waitFor(() => expect(screen.getByText('اطلاعات سفارش ذخیره شد.')).toBeInTheDocument());
     await user.click(screen.getByRole('button', { name: 'مقادیر فایل اصلی' }));
     expect(screen.getByText('نام فایل')).toBeInTheDocument();
     expect(screen.getByText('علی حسینی')).toBeInTheDocument();
+    expect(
+      (await port.listReviewItems('P-2405')).find((item) => item.reviewItemId === 'D-1044')?.phone,
+    ).toBe('09123415678');
   });
 
   it('asks for discard confirmation when leaving a dirty edit form', async () => {

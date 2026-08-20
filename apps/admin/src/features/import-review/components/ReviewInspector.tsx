@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 
 import { Icon, ICONS } from '@/features/plans/components/icons';
 import { Button, Field, InlineMessage, Input, LtrData, Panel, StatusBadge } from '@/shared/ui';
+import { formatPhoneForDisplay } from '@/shared/lib/phone';
 
 import { ReviewLocationEditor } from '@/features/import-review/components/ReviewLocationEditor';
 import {
@@ -67,10 +68,7 @@ export function ReviewInspector({
   });
   const [editDirty, setEditDirty] = useState(false);
 
-  const peers = useMemo(
-    () => (task ? duplicatePeers(allTasks, task) : []),
-    [allTasks, task],
-  );
+  const peers = useMemo(() => (task ? duplicatePeers(allTasks, task) : []), [allTasks, task]);
 
   if (!task)
     return (
@@ -155,7 +153,9 @@ export function ReviewInspector({
             readOnly={readOnly}
           />
           {saveFailed ? (
-            <InlineMessage tone="error">ذخیره ناموفق بود. موقعیت پیشنهادی حفظ شده است.</InlineMessage>
+            <InlineMessage tone="error">
+              ذخیره ناموفق بود. موقعیت پیشنهادی حفظ شده است.
+            </InlineMessage>
           ) : null}
           <Button
             disabled={!proposed || readOnly}
@@ -232,10 +232,14 @@ export function ReviewInspector({
             />
           </Field>
           {saveFailed ? (
-            <InlineMessage tone="error">ذخیره ناموفق بود. مقادیر واردشده حفظ شده‌اند.</InlineMessage>
+            <InlineMessage tone="error">
+              ذخیره ناموفق بود. مقادیر واردشده حفظ شده‌اند.
+            </InlineMessage>
           ) : null}
           <Button
-            disabled={!editValues.name.trim() || !editValues.address.trim() || !phoneValid || readOnly}
+            disabled={
+              !editValues.name.trim() || !editValues.address.trim() || !phoneValid || readOnly
+            }
             loading={pendingKind === 'information'}
             onClick={async () => {
               if (await onEditInformation(task.id, editValues)) {
@@ -257,8 +261,8 @@ export function ReviewInspector({
         {header('بررسی شماره سفارش تکراری')}
         <div className="flex flex-col gap-3 overflow-y-auto p-3.5">
           <InlineMessage tone="warning">
-            شماره سفارش این ردیف در همین واردات تکرار شده است. ردیف‌ها فقط وقتی تکراری‌اند که شناسه سفارش
-            یکسان باشد.
+            شماره سفارش این ردیف در همین واردات تکرار شده است. ردیف‌ها فقط وقتی تکراری‌اند که شناسه
+            سفارش یکسان باشد.
           </InlineMessage>
           <Panel title="ردیف‌های با همان شماره سفارش">
             <div className="flex flex-col gap-2 text-xs">
@@ -268,7 +272,9 @@ export function ReviewInspector({
               {peers.map((peer) => (
                 <div key={peer.reviewItemId}>
                   <LtrData>{peer.externalOrderId}</LtrData> · {peer.name}
-                  <div className="mt-0.5 text-[10.5px] text-[var(--text-muted)]">{peer.address}</div>
+                  <div className="mt-0.5 text-[10.5px] text-[var(--text-muted)]">
+                    {peer.address}
+                  </div>
                 </div>
               ))}
             </div>
@@ -318,7 +324,11 @@ export function ReviewInspector({
           >
             {restoring ? 'بازگردان' : 'مستثنا کن'}
           </Button>
-          <Button variant="subtle" disabled={Boolean(pendingKind)} onClick={() => setMode('overview')}>
+          <Button
+            variant="subtle"
+            disabled={Boolean(pendingKind)}
+            onClick={() => setMode('overview')}
+          >
             انصراف
           </Button>
         </div>
@@ -391,7 +401,7 @@ export function ReviewInspector({
             <div className="review-inspector-kv">
               <dt>تلفن</dt>
               <dd className={task.issues.includes('phone') ? 'text-[var(--warning-text)]' : ''}>
-                <LtrData>{task.phone}</LtrData>
+                <LtrData>{formatPhoneForDisplay(task.phone)}</LtrData>
               </dd>
             </div>
             <div className="review-inspector-kv">
@@ -429,7 +439,10 @@ export function ReviewInspector({
             </>
           ) : (
             <div className="flex items-center gap-1.5 text-xs text-[var(--error-text)]">
-              <Icon d={task.issues.includes('invalid_coords') ? ICONS.error_x : ICONS.map_pin} size={12} />
+              <Icon
+                d={task.issues.includes('invalid_coords') ? ICONS.error_x : ICONS.map_pin}
+                size={12}
+              />
               {task.issues.includes('invalid_coords')
                 ? 'مختصات ورودی نامعتبر'
                 : task.issues.includes('loc_ambiguous')

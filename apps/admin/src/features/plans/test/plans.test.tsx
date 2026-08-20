@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest';
 import { A01_DEMO_PLANS } from '@/features/plans/fixture/demo-plans';
 import { normalizePlanViewModel } from '@/features/plans/normalize-plan';
 import { createTestPort, renderApp } from '@/features/plans/test/render';
+import { dateToJalali, formatJalaliInputDate, JALALI_MONTHS } from '@/shared/date/jalali';
+import { toPersianDigits } from '@/shared/lib/format';
 
 function excelFile(name: string) {
   return new File(['abc'], name, {
@@ -15,6 +17,17 @@ function excelFile(name: string) {
 async function selectExcel(user: ReturnType<typeof userEvent.setup>, name: string) {
   const input = document.querySelector('input[type="file"]') as HTMLInputElement;
   await user.upload(input, excelFile(name));
+}
+
+async function selectDeliveryDate(user: ReturnType<typeof userEvent.setup>, day = 10) {
+  const today = dateToJalali(new Date());
+  await user.click(screen.getByLabelText(/تاریخ تحویل/));
+  await user.click(
+    await screen.findByRole('button', {
+      name: `${toPersianDigits(day)} ${JALALI_MONTHS[today[1] - 1]}`,
+    }),
+  );
+  return formatJalaliInputDate([today[0], today[1], day]);
 }
 
 describe('Plans list', () => {
@@ -231,14 +244,12 @@ describe('Create Plan', () => {
     await screen.findByText('P-2407');
     await user.click(screen.getByRole('button', { name: /^برنامه جدید$/ }));
 
-    const date = await screen.findByLabelText(/تاریخ تحویل/);
-    await user.clear(date);
-    await user.type(date, '۱۴۰۳/۰۶/۱۰');
+    await selectDeliveryDate(user);
     await user.click(screen.getByRole('button', { name: '۹ تا ۱۲' }));
 
     const name = screen.getByLabelText('نام برنامه') as HTMLInputElement;
     await waitFor(() => {
-      expect(name.value).toContain('شهریور');
+      expect(name.value).toContain(JALALI_MONTHS[dateToJalali(new Date())[1] - 1]);
       expect(name.value).toContain('۹ تا ۱۲');
     });
 
@@ -255,7 +266,7 @@ describe('Create Plan', () => {
     await screen.findByText('هنوز برنامه‌ای وجود ندارد');
     await user.click(screen.getAllByRole('button', { name: /برنامه جدید/ })[0]!);
 
-    await user.type(screen.getByLabelText(/تاریخ تحویل/), '۱۴۰۳/۰۶/۱۰');
+    const selectedDate = await selectDeliveryDate(user);
     await user.click(screen.getByRole('button', { name: 'ایجاد برنامه' }));
 
     expect(await screen.findByRole('heading', { name: 'داده‌های برنامه' })).toBeInTheDocument();
@@ -263,6 +274,60 @@ describe('Create Plan', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toMatch(/\/plans\/P-\d+\/intake/);
     });
+    expect((await port.listPlans())[0]?.deliveryDate).toBe(selectedDate);
+  });
+
+  it('selects, preserves, and replaces a read-only calendar date', async () => {
+    const user = userEvent.setup();
+    renderApp('/plans');
+    await screen.findByText('P-2407');
+    await user.click(screen.getByRole('button', { name: /^برنامه جدید$/ }));
+
+    const input = screen.getByLabelText(/تاریخ تحویل/) as HTMLInputElement;
+    expect(input).toHaveAttribute('readonly');
+
+    await user.click(input);
+    expect(await screen.findByRole('group', { name: 'تقویم جلالی' })).toBeInTheDocument();
+    expect(document.querySelector('[data-placement="bottom-end"]')).toHaveStyle({ insetInlineEnd: 0 });
+    await user.click(input);
+    expect(screen.queryByRole('group', { name: 'تقویم جلالی' })).not.toBeInTheDocument();
+    expect(input.value).toBe('');
+
+    await user.click(input);
+    await user.click(screen.getByLabelText('نام برنامه'));
+    expect(screen.queryByRole('group', { name: 'تقویم جلالی' })).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'ایجاد برنامه' }));
+    expect(await screen.findByText('تاریخ تحویل الزامی است')).toBeInTheDocument();
+
+    const firstDate = await selectDeliveryDate(user, 10);
+    expect(input.value).toBe(firstDate);
+    expect(screen.queryByRole('group', { name: 'تقویم جلالی' })).not.toBeInTheDocument();
+    expect(screen.queryByText('تاریخ تحویل الزامی است')).not.toBeInTheDocument();
+
+    await user.click(input);
+    await user.click(input);
+    expect(input.value).toBe(firstDate);
+    expect(screen.queryByRole('group', { name: 'تقویم جلالی' })).not.toBeInTheDocument();
+
+    await user.click(input);
+    const selectedDay = await screen.findByRole('button', {
+      name: `${toPersianDigits(10)} ${JALALI_MONTHS[dateToJalali(new Date())[1] - 1]}`,
+    });
+    expect(selectedDay).toHaveAttribute('aria-pressed', 'true');
+
+    const today = dateToJalali(new Date());
+    await user.click(
+      screen.getByRole('button', {
+        name: `${toPersianDigits(11)} ${JALALI_MONTHS[today[1] - 1]}`,
+      }),
+    );
+    expect(input.value).toBe(formatJalaliInputDate([today[0], today[1], 11]));
+
+    await user.click(screen.getByRole('button', { name: 'انصراف' }));
+    await user.click(screen.getByRole('button', { name: /^برنامه جدید$/ }));
+    expect((screen.getByLabelText(/تاریخ تحویل/) as HTMLInputElement).value).toBe('');
   });
 
   it('preserves values on create failure', async () => {
@@ -275,8 +340,7 @@ describe('Create Plan', () => {
     const createButtons = screen.getAllByRole('button', { name: /برنامه جدید/ });
     await user.click(createButtons[0]!);
 
-    const date = await screen.findByLabelText(/تاریخ تحویل/);
-    await user.type(date, '۱۴۰۳/۰۶/۱۱');
+    const selectedDate = await selectDeliveryDate(user, 11);
     const name = screen.getByLabelText('نام برنامه') as HTMLInputElement;
     await user.clear(name);
     await user.type(name, 'برنامه تست خطا');
@@ -284,7 +348,7 @@ describe('Create Plan', () => {
     await user.click(screen.getByRole('button', { name: 'ایجاد برنامه' }));
     expect(await screen.findByText(/ایجاد برنامه با خطا مواجه شد/)).toBeInTheDocument();
 
-    expect((screen.getByLabelText(/تاریخ تحویل/) as HTMLInputElement).value).toBe('۱۴۰۳/۰۶/۱۱');
+    expect((screen.getByLabelText(/تاریخ تحویل/) as HTMLInputElement).value).toBe(selectedDate);
     expect((screen.getByLabelText('نام برنامه') as HTMLInputElement).value).toBe('برنامه تست خطا');
   });
 });

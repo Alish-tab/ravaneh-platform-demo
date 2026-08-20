@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button, Field, Input, InlineMessage, LtrIso, StatusBadge, Toggle } from '@/shared/ui';
 import { useDriversPort, useDriversVersion } from '@/features/drivers/port/useDriversData';
 import { usePlansDataPort } from '@/features/plans/fixture/usePlansFixture';
-import { dateToJalali, jalaliSortKey } from '@/features/ops/lib/jalali';
+import { dateToJalali, jalaliSortKey } from '@/shared/date/jalali';
 import type { DriverRecord, DriverTodayAssignment, DriverMutationState, DriverAppAccessStatus } from '@/features/drivers/model/types';
 import '@/features/drivers/drivers.css';
 

@@ -1,8 +1,12 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { renderExecution } from '@/features/execution/test/render';
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe('A04 operations panel', () => {
   it('renders areas tab, filters, and area detail', async () => {
@@ -136,13 +140,17 @@ describe('A04 order search', () => {
     await user.type(input, '10123458');
     await user.keyboard('{Enter}');
     expect(await screen.findByText('رضا نجفی')).toBeInTheDocument();
-    expect(within(screen.getByTestId('execution-panel')).getByText('تحویل‌شده')).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('execution-panel')).getByText('تحویل‌شده'),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'پاک کردن جستجو' }));
     await user.type(input, '10123891');
     await user.keyboard('{Enter}');
     expect(await screen.findByText('محمد رضایی')).toBeInTheDocument();
-    expect(within(screen.getByTestId('execution-panel')).getAllByText('نیازمند پیگیری').length).toBeGreaterThan(0);
+    expect(
+      within(screen.getByTestId('execution-panel')).getAllByText('نیازمند پیگیری').length,
+    ).toBeGreaterThan(0);
   });
 
   it('shows not-found and can clear search', async () => {
@@ -167,7 +175,9 @@ describe('A04 follow-up notes', () => {
     await user.click(screen.getByRole('tab', { name: /نیازمند پیگیری/ }));
     await user.click(await screen.findByRole('button', { name: /محمد رضایی/ }));
 
-    expect(within(screen.getByTestId('execution-panel')).getByText('امین رضایی')).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('execution-panel')).getByText('امین رضایی'),
+    ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'ثبت پیگیری' }));
     const textarea = screen.getByLabelText('یادداشت پیگیری');
     expect(screen.getByRole('button', { name: 'ثبت' })).toBeDisabled();
@@ -186,7 +196,35 @@ describe('A04 follow-up notes', () => {
     expect(screen.queryByLabelText('یادداشت پیگیری')).not.toBeInTheDocument();
   });
 
-  it('copies phone numbers without breaking the detail on clipboard failure', async () => {
+  it('copies the raw phone and replaces success feedback on repeated copy', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+    await renderExecution();
+    await screen.findByRole('tab', { name: /نیازمند پیگیری/ });
+    await user.click(screen.getByRole('tab', { name: /نیازمند پیگیری/ }));
+    await user.click(await screen.findByRole('button', { name: /محمد رضایی/ }));
+
+    expect(screen.getByText('0912-444-0404')).toBeInTheDocument();
+    const copyButton = screen.getByRole('button', { name: 'کپی شماره تلفن' });
+    vi.useFakeTimers();
+    fireEvent.click(copyButton);
+    await act(async () => undefined);
+    expect(writeText).toHaveBeenCalledWith('09124440404');
+    expect(screen.getByText('شماره تلفن کپی شد')).toBeInTheDocument();
+
+    act(() => vi.advanceTimersByTime(1000));
+    fireEvent.click(copyButton);
+    await act(async () => undefined);
+    expect(writeText).toHaveBeenCalledTimes(2);
+    expect(screen.getAllByText('شماره تلفن کپی شد')).toHaveLength(1);
+    act(() => vi.advanceTimersByTime(2000));
+    expect(screen.getByText('شماره تلفن کپی شد')).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(1000));
+    expect(screen.queryByText('شماره تلفن کپی شد')).not.toBeInTheDocument();
+  });
+
+  it('shows error feedback without false success on clipboard failure', async () => {
     const user = userEvent.setup();
     const writeText = vi.fn().mockRejectedValue(new Error('denied'));
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
@@ -194,8 +232,31 @@ describe('A04 follow-up notes', () => {
     await screen.findByRole('tab', { name: /نیازمند پیگیری/ });
     await user.click(screen.getByRole('tab', { name: /نیازمند پیگیری/ }));
     await user.click(await screen.findByRole('button', { name: /محمد رضایی/ }));
-    await user.click(screen.getByRole('button', { name: 'کپی شماره تلفن' }));
-    expect(await screen.findByText('کپی نشد')).toBeInTheDocument();
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByRole('button', { name: 'کپی شماره تلفن' }));
+    await act(async () => undefined);
+    expect(writeText).toHaveBeenCalledWith('09124440404');
+    expect(screen.getByText('کپی شماره تلفن ناموفق بود')).toBeInTheDocument();
+    expect(screen.queryByText('شماره تلفن کپی شد')).not.toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(3000));
+    expect(screen.queryByText('کپی شماره تلفن ناموفق بود')).not.toBeInTheDocument();
     expect(screen.getByText('محمد رضایی')).toBeInTheDocument();
+  });
+
+  it('cleans up a pending copy-toast timer on unmount', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+    const view = await renderExecution();
+    await screen.findByRole('tab', { name: /نیازمند پیگیری/ });
+    await user.click(screen.getByRole('tab', { name: /نیازمند پیگیری/ }));
+    await user.click(await screen.findByRole('button', { name: /محمد رضایی/ }));
+
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByRole('button', { name: 'کپی شماره تلفن' }));
+    await act(async () => undefined);
+    expect(vi.getTimerCount()).toBe(1);
+    view.unmount();
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

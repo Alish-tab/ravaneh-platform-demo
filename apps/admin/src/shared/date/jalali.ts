@@ -1,10 +1,12 @@
 /**
- * Feature-local Jalali (Solar Hijri) calendar utilities for A05 Operations Home.
+ * Shared Jalali (Solar Hijri) calendar utilities.
  *
  * Converted from the Figma prototype reference implementation.
  * No third-party date library added.
  * Do NOT use this for API date serialization — presentation/display only.
  */
+
+import { toPersianDigits } from '@/shared/lib/format';
 
 export const JALALI_MONTHS = [
   'فروردین',
@@ -25,6 +27,26 @@ export const JALALI_WEEK_DAYS = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'] as co
 
 export type JalaliDate = [number, number, number]; // [year, month, day]
 
+/** Format a Jalali date for the existing plan delivery-date field. */
+export function formatJalaliInputDate([year, month, day]: JalaliDate): string {
+  return toPersianDigits(
+    `${String(year).padStart(4, '0')}/${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}`,
+  );
+}
+
+/** Parse the plan delivery-date display format without changing its persisted model. */
+export function parseJalaliInputDate(value: string): JalaliDate | null {
+  const latin = value.replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)));
+  const match = /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/.exec(latin.trim());
+  if (!match) return null;
+
+  const date: JalaliDate = [Number(match[1]), Number(match[2]), Number(match[3])];
+  if (date[1] < 1 || date[1] > 12 || date[2] < 1 || date[2] > jalaliDaysInMonth(date[0], date[1])) {
+    return null;
+  }
+  return date;
+}
+
 /** Convert Gregorian → Jalali. */
 export function toJalali(gy: number, gm: number, gd: number): JalaliDate {
   const g_y = gy - 1600;
@@ -33,7 +55,16 @@ export function toJalali(gy: number, gm: number, gd: number): JalaliDate {
   const gMonDays = [
     31,
     28 + (gy % 4 === 0 && (gy % 100 !== 0 || gy % 400 === 0) ? 1 : 0),
-    31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+    31,
+    30,
+    31,
+    30,
+    31,
+    31,
+    30,
+    31,
+    30,
+    31,
   ];
   let g_d_no =
     365 * g_y +
@@ -62,8 +93,7 @@ export function toGregorian(jy: number, jm: number, jd: number): [number, number
   const j_m = jm - 1;
   const j_d = jd - 1;
   const jMonDays = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29];
-  let j_d_no =
-    365 * j_y + Math.floor(j_y / 33) * 8 + Math.floor((j_y % 33 + 3) / 4);
+  let j_d_no = 365 * j_y + Math.floor(j_y / 33) * 8 + Math.floor(((j_y % 33) + 3) / 4);
   for (let i = 0; i < j_m; i++) j_d_no += jMonDays[i]!;
   j_d_no += j_d;
   let g_d_no = j_d_no + 79;

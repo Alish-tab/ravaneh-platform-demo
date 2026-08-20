@@ -15,7 +15,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { JalaliCalendar } from '@/features/ops/components/JalaliCalendar';
+import { JalaliCalendar } from '@/shared/ui/JalaliCalendar';
 import {
   addDaysToJalali,
   dateToJalali,
@@ -24,7 +24,7 @@ import {
   jalaliSortKey,
   relativeDayLabel,
   type JalaliDate,
-} from '@/features/ops/lib/jalali';
+} from '@/shared/date/jalali';
 import type {
   OpsDateSummary,
   OpsFollowupItem,

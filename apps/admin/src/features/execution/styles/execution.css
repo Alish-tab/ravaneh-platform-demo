@@ -17,11 +17,21 @@
 }
 
 .execution-body {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.execution-copy-toast {
+  position: absolute;
+  inset-inline-end: 16px;
+  bottom: 16px;
+  z-index: 120;
+  width: min(320px, calc(100% - 32px));
+  pointer-events: none;
 }
 
 .execution-summary {
@@ -535,11 +545,6 @@
 
 .execution-note-form textarea.failed {
   border-color: rgba(196, 68, 68, 0.5);
-}
-
-.execution-copy-failed {
-  font-size: 10.5px;
-  color: var(--error-text);
 }
 
 .execution-empty {

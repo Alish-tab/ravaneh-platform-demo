@@ -1,8 +1,15 @@
-﻿import { useEffect, useMemo } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { zodResolver } from '@/shared/lib/forms';
 import { Controller, useForm, z } from '@/shared/lib/forms';
 import { Button, Field, InlineMessage, Input } from '@/shared/ui';
+import { JalaliCalendar } from '@/shared/ui/JalaliCalendar';
+import {
+  dateToJalali,
+  formatJalaliInputDate,
+  parseJalaliInputDate,
+  type JalaliDate,
+} from '@/shared/date/jalali';
 
 import { DialogShell } from '@/features/plans/components/DialogShell';
 import { Icon, ICONS } from '@/features/plans/components/icons';
@@ -24,6 +31,10 @@ type CreatePlanDialogProps = {
 };
 
 export function CreatePlanDialog({ onSubmit, onCancel }: CreatePlanDialogProps) {
+  const todayJ = useMemo(() => dateToJalali(new Date()), []);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarViewYM, setCalendarViewYM] = useState<[number, number]>([todayJ[0], todayJ[1]]);
+  const calendarFieldRef = useRef<HTMLDivElement>(null);
   const {
     control,
     register,
@@ -47,6 +58,20 @@ export function CreatePlanDialog({ onSubmit, onCancel }: CreatePlanDialogProps) 
   const windowValue = watch('window');
   const nameEdited = watch('nameEdited');
   const name = watch('name');
+  const selectedDeliveryDate = useMemo(() => parseJalaliInputDate(deliveryDate), [deliveryDate]);
+
+  useEffect(() => {
+    if (!calendarOpen) return;
+
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!calendarFieldRef.current?.contains(event.target as Node)) {
+        setCalendarOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', closeOnOutsideClick);
+    return () => document.removeEventListener('mousedown', closeOnOutsideClick);
+  }, [calendarOpen]);
 
   useEffect(() => {
     if (!nameEdited) {
@@ -73,6 +98,22 @@ export function CreatePlanDialog({ onSubmit, onCancel }: CreatePlanDialogProps) 
       });
     }
   });
+
+  const toggleCalendar = () => {
+    setCalendarOpen((wasOpen) => {
+      if (!wasOpen) {
+        const initial = selectedDeliveryDate ?? todayJ;
+        setCalendarViewYM([initial[0], initial[1]]);
+      }
+      return !wasOpen;
+    });
+  };
+
+  const selectDeliveryDate = (date: JalaliDate, onChange: (value: string) => void) => {
+    onChange(formatJalaliInputDate(date));
+    clearErrors('deliveryDate');
+    setCalendarOpen(false);
+  };
 
   return (
     <DialogShell
@@ -116,19 +157,59 @@ export function CreatePlanDialog({ onSubmit, onCancel }: CreatePlanDialogProps) 
           error={errors.deliveryDate?.message}
           htmlFor="a01-delivery-date"
         >
-          <div className="relative">
-            <Input
-              id="a01-delivery-date"
-              placeholder="مثال: ۱۴۰۵/۰۶/۰۵"
-              className="pe-8"
-              error={Boolean(errors.deliveryDate)}
-              aria-required
-              {...register('deliveryDate')}
-            />
-            <span className="pointer-events-none absolute end-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
-              <Icon d={ICONS.calendar} size={13} />
-            </span>
-          </div>
+          <Controller
+            control={control}
+            name="deliveryDate"
+            render={({ field }) => (
+              <div
+                ref={calendarFieldRef}
+                className="relative"
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape' && calendarOpen) {
+                    event.stopPropagation();
+                    setCalendarOpen(false);
+                  }
+                }}
+              >
+                <Input
+                  {...field}
+                  id="a01-delivery-date"
+                  placeholder="انتخاب تاریخ"
+                  className="cursor-pointer pe-8"
+                  error={Boolean(errors.deliveryDate)}
+                  aria-required
+                  aria-haspopup="dialog"
+                  aria-expanded={calendarOpen}
+                  readOnly
+                  onClick={toggleCalendar}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      toggleCalendar();
+                    }
+                  }}
+                />
+                <span className="pointer-events-none absolute end-2.5 top-[17px] -translate-y-1/2 text-[var(--text-muted)]">
+                  <Icon d={ICONS.calendar} size={13} />
+                </span>
+                {calendarOpen ? (
+                  <div
+                    data-placement="bottom-end"
+                    className="absolute top-[calc(100%+6px)] z-[60]"
+                    style={{ insetInlineEnd: 0 }}
+                  >
+                    <JalaliCalendar
+                      viewYM={calendarViewYM}
+                      onViewYMChange={setCalendarViewYM}
+                      selected={selectedDeliveryDate}
+                      todayJ={todayJ}
+                      onSelect={(date) => selectDeliveryDate(date, field.onChange)}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            )}
+          />
         </Field>
 
         <Field
