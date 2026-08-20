@@ -1,13 +1,15 @@
-import { useMemo } from 'react';
-import { Polygon } from 'react-leaflet';
+import { useMemo, useState } from 'react';
 import type { LatLngBoundsExpression } from 'leaflet';
+import { useMap } from 'react-leaflet';
 
 import { DeliveryLocationMarker } from '@/features/execution/components/DeliveryLocationMarker';
 import { MapErrorBoundary } from '@/features/execution/components/MapErrorBoundary';
 import { locationOrders, locationStatus } from '@/features/execution/model/derive';
 import type { ExecutionSnapshot } from '@/features/execution/model/types';
-import { MapClickDeselect, stopMapClickPropagation } from '@/features/planning/components/map/MapClickDeselect';
-import { FitBoundsOnMount, InvalidateOnLayout, InvalidateOnMount } from '@/features/planning/components/map/MapViewport';
+import { AreaPolygon, type AreaPolygonVisualState } from '@/shared/map/AreaPolygon';
+import { MapClickDeselect } from '@/shared/map/MapClickDeselect';
+import { MapToolbar } from '@/shared/map/MapToolbar';
+import { FitBoundsOnMount, InvalidateOnLayout, InvalidateOnMount } from '@/shared/map/MapViewport';
 import { BaseMap } from '@/shared/map/BaseMap';
 
 const AREA_STYLE = {
@@ -15,6 +17,39 @@ const AREA_STYLE = {
   ambient: { weight: 1.5, opacity: 0.28, fillOpacity: 0.05 },
   normal: { weight: 2, opacity: 0.7, fillOpacity: 0.12 },
 } as const;
+
+type ExecutionMapControlsProps = {
+  allBounds: LatLngBoundsExpression | null;
+  selectedBounds: LatLngBoundsExpression | null;
+  showAreas: boolean;
+  onToggleAreas: () => void;
+};
+
+function ExecutionMapControls({
+  allBounds,
+  selectedBounds,
+  showAreas,
+  onToggleAreas,
+}: ExecutionMapControlsProps) {
+  const map = useMap();
+
+  return (
+    <MapToolbar
+      onZoomIn={() => map.zoomIn()}
+      onZoomOut={() => map.zoomOut()}
+      onFitAll={() => {
+        if (allBounds) map.fitBounds(allBounds, { padding: [60, 60], maxZoom: 14 });
+      }}
+      onFitSelected={() => {
+        if (!selectedBounds) return;
+        map.fitBounds(selectedBounds, { padding: [80, 80], maxZoom: 14, animate: true });
+      }}
+      onToggleAreas={onToggleAreas}
+      hasSelection={selectedBounds !== null}
+      showAreas={showAreas}
+    />
+  );
+}
 
 type ExecutionMapProps = {
   snapshot: ExecutionSnapshot;
@@ -35,48 +70,67 @@ export function ExecutionMap({
   onSelectLocation,
   onClearSelection,
 }: ExecutionMapProps) {
+  const [showAreas, setShowAreas] = useState(true);
   const bounds = useMemo((): LatLngBoundsExpression | null => {
     const points = snapshot.locations.map((location) => [location.lat, location.lng] as [number, number]);
     return points.length > 0 ? points : null;
   }, [snapshot.locations]);
+  const allBounds = useMemo((): LatLngBoundsExpression | null => {
+    const points = [
+      ...snapshot.locations.map((location) => [location.lat, location.lng] as [number, number]),
+      ...snapshot.areas.flatMap((area) => area.polygon),
+    ];
+    return points.length > 0 ? points : null;
+  }, [snapshot.areas, snapshot.locations]);
+  const selectedBounds = useMemo((): LatLngBoundsExpression | null => {
+    if (!selectedAreaId) return null;
+    const area = snapshot.areas.find((item) => item.id === selectedAreaId);
+    if (area?.polygon.length) return area.polygon;
+    const locations = snapshot.locations
+      .filter((location) => location.areaId === selectedAreaId)
+      .map((location) => [location.lat, location.lng] as [number, number]);
+    return locations.length > 0 ? locations : null;
+  }, [selectedAreaId, snapshot.areas, snapshot.locations]);
 
   return (
     <div
-      className="execution-map-pane"
+      className="shared-map-pane"
       data-testid="execution-map"
       data-selected-area-id={selectedAreaId ?? ''}
       data-selected-location-id={selectedLocationId ?? ''}
+      data-show-areas={showAreas ? 'true' : 'false'}
     >
       <MapErrorBoundary>
-        <BaseMap className="h-full w-full" zoomControl scrollWheelZoom zoom={12}>
+        <BaseMap className="h-full w-full" zoomControl={false} scrollWheelZoom zoom={12}>
           <InvalidateOnMount />
           <InvalidateOnLayout trigger={panelCollapsed} />
           <FitBoundsOnMount bounds={bounds} />
           <MapClickDeselect enabled onClearSelection={onClearSelection} />
-          {snapshot.areas.map((area) => {
+          <ExecutionMapControls
+            allBounds={allBounds}
+            selectedBounds={selectedBounds}
+            showAreas={showAreas}
+            onToggleAreas={() => setShowAreas((visible) => !visible)}
+          />
+          {showAreas ? snapshot.areas.map((area) => {
             const isSelected = selectedAreaId === area.id;
             const isAmbient = selectedAreaId !== null && !isSelected;
-            const style = isSelected ? AREA_STYLE.selected : isAmbient ? AREA_STYLE.ambient : AREA_STYLE.normal;
+            const visualState: AreaPolygonVisualState = isSelected
+              ? 'selected'
+              : isAmbient
+                ? 'ambient'
+                : 'normal';
             return (
-              <Polygon
+              <AreaPolygon
                 key={area.id}
                 positions={area.polygon}
-                pathOptions={{
-                  color: area.color,
-                  weight: style.weight,
-                  opacity: style.opacity,
-                  fillColor: area.color,
-                  fillOpacity: style.fillOpacity,
-                }}
-                eventHandlers={{
-                  click: (event) => {
-                    stopMapClickPropagation(event);
-                    onSelectArea(area.id);
-                  },
-                }}
+                color={area.color}
+                visualState={visualState}
+                presentation={AREA_STYLE}
+                onClick={() => onSelectArea(area.id)}
               />
             );
-          })}
+          }) : null}
           {snapshot.locations.map((location) => {
             const orders = locationOrders(snapshot, location.id);
             if (orders.length === 0) return null;

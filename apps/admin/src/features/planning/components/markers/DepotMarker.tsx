@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 
-import { stopMapClickPropagation } from '@/features/planning/components/map/MapClickDeselect';
+import { stopMapClickPropagation } from '@/shared/map/MapClickDeselect';
 
 type DepotMarkerProps = {
   lat: number;
@@ -22,7 +22,7 @@ export function DepotMarker({ lat, lng, name }: DepotMarkerProps) {
       iconAnchor: [11, 11],
     });
     const marker = L.marker([lat, lng], { icon, pane: 'markerPane', zIndexOffset: 500 }).addTo(map);
-    marker.bindTooltip(name, { direction: 'top', offset: [0, -14], className: 'planning-map-tooltip' });
+    marker.bindTooltip(name, { direction: 'top', offset: [0, -14], className: 'map-tooltip' });
     marker.on('click', stopMapClickPropagation);
     markerRef.current = marker;
     return () => {

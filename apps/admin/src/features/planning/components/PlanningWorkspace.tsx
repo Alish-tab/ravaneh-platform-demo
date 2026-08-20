@@ -332,7 +332,7 @@ export function PlanningWorkspace({
         }
       />
       <div className="planning-workspace">
-        <div className="planning-map-pane" data-testid="planning-map-pane">
+        <div className="shared-map-pane" data-testid="planning-map-pane">
           <PlanningMap
             fixture={fixture}
             areas={areas}

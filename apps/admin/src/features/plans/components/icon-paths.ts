@@ -1,3 +1,5 @@
+import { MAP_TOOLBAR_ICONS } from '@/shared/map/MapIcon';
+
 /**
  * SVG icon paths for plan UI (presentation only).
  */
@@ -32,8 +34,9 @@ export const ICONS = {
   logout: 'M6 8h8M11 5l3 3-3 3M9 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h6',
   chevron_r: 'M6 4l4 4-4 4',
   chevron_d: 'M4 6l4 4 4-4',
-  layers: 'M8 1 1 5l7 4 7-4-7-4zM1 11l7 4 7-4M1 7.5l7 4 7-4',
-  target: 'M8 1v2M8 13v2M1 8h2M13 8h2M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z',
+  layers: MAP_TOOLBAR_ICONS.layers,
+  target: MAP_TOOLBAR_ICONS.target,
+  focus_area: MAP_TOOLBAR_ICONS.focus_area,
   panel_end: 'M2 2h12v12H2zM11 2v12',
   transfer: 'M2 8h10M9 5l3 3-3 3',
   lock: 'M5 8V5.5a3 3 0 0 1 6 0V8M3 9h10v5H3V9z',

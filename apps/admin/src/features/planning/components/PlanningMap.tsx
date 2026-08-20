@@ -1,22 +1,18 @@
 import { useMemo } from 'react';
 import type { LatLngBoundsExpression } from 'leaflet';
+import { useMap } from 'react-leaflet';
 
 import {
-  FitBoundsOnMount,
   FitOnGenerate,
   FitSelectedRoute,
-  InvalidateOnLayout,
-  InvalidateOnMount,
   PanToPoint,
 } from '@/features/planning/components/map/MapViewport';
-import { MapClickDeselect } from '@/features/planning/components/map/MapClickDeselect';
 import { LocationCorrectionLayer } from '@/features/planning/components/layers/LocationCorrectionLayer';
 import { RoutePolygons } from '@/features/planning/components/layers/RoutePolygons';
 import { DepotMarker } from '@/features/planning/components/markers/DepotMarker';
 import { NeutralStopMarker } from '@/features/planning/components/markers/NeutralStopMarker';
 import { StopMarker } from '@/features/planning/components/markers/StopMarker';
 import { UnassignedStopMarker } from '@/features/planning/components/markers/UnassignedStopMarker';
-import { PlanningMapToolbar } from '@/features/planning/components/PlanningMapToolbar';
 import { allStopPositions, findStopInPlan } from '@/features/planning/fixture/planning-fixture';
 import type { PlanningPlanFixture, PlanningStop } from '@/features/planning/fixture/types';
 import type { PlanningLatLng } from '@/features/planning/fixture/update-stop-location';
@@ -25,6 +21,49 @@ import type { RouteAreaEntry } from '@/features/planning/map/route-area';
 import type { LatLngTuple } from '@/features/planning/map/osrm';
 import { Icon, ICONS } from '@/features/plans/components/icons';
 import { BaseMap } from '@/shared/map/BaseMap';
+import { MapClickDeselect } from '@/shared/map/MapClickDeselect';
+import { MapToolbar } from '@/shared/map/MapToolbar';
+import { FitBoundsOnMount, InvalidateOnLayout, InvalidateOnMount } from '@/shared/map/MapViewport';
+
+type PlanningMapControlsProps = {
+  bounds: LatLngBoundsExpression | null;
+  selectedPositions: LatLngTuple[] | null;
+  showRouteAreas: boolean;
+  areasGenerated: boolean;
+  onToggleRouteAreas: () => void;
+};
+
+function PlanningMapControls({
+  bounds,
+  selectedPositions,
+  showRouteAreas,
+  areasGenerated,
+  onToggleRouteAreas,
+}: PlanningMapControlsProps) {
+  const map = useMap();
+
+  return (
+    <MapToolbar
+      onZoomIn={() => map.zoomIn()}
+      onZoomOut={() => map.zoomOut()}
+      onFitAll={() => {
+        if (bounds) map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14 });
+      }}
+      onFitSelected={() => {
+        if (!selectedPositions?.length) return;
+        map.fitBounds(selectedPositions as LatLngBoundsExpression, {
+          padding: [80, 80],
+          maxZoom: 14,
+          animate: true,
+        });
+      }}
+      onToggleAreas={onToggleRouteAreas}
+      hasSelection={Boolean(selectedPositions?.length)}
+      showAreas={showRouteAreas}
+      showAreaToggle={areasGenerated}
+    />
+  );
+}
 
 type PlanningMapProps = {
   fixture: PlanningPlanFixture;
@@ -88,6 +127,11 @@ export function PlanningMap({
   const activeAreaPositions = areasGenerated
     ? areaPositionsForRoute(areas, activeRouteId)
     : null;
+  const toolbarSelectedPositions = activeAreaPositions?.length
+    ? activeAreaPositions
+    : areasGenerated && activeRouteStops?.length
+      ? activeRouteStops.map((stop) => [stop.lat, stop.lng] as LatLngTuple)
+      : null;
 
   const preGenerationStops = useMemo(() => {
     const stops: PlanningStop[] = [];
@@ -140,10 +184,9 @@ export function PlanningMap({
         <InvalidateOnLayout trigger={panelCollapsed} />
         <InvalidateOnLayout trigger={areasGenerated} />
         <MapClickDeselect enabled={!correctionActive} onClearSelection={onClearMapSelection} />
-        <PlanningMapToolbar
+        <PlanningMapControls
           bounds={bounds}
-          activeRouteStops={areasGenerated ? activeRouteStops : null}
-          activeRouteArea={activeAreaPositions}
+          selectedPositions={toolbarSelectedPositions}
           showRouteAreas={showRouteAreas}
           areasGenerated={areasGenerated}
           onToggleRouteAreas={onToggleRouteAreas}

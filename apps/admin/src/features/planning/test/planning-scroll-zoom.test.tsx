@@ -8,6 +8,10 @@ import { buildRouteAreas } from '@/features/planning/map/route-area';
 
 const baseMapCalls: Array<{ scrollWheelZoom?: boolean }> = [];
 
+vi.mock('react-leaflet', () => ({
+  useMap: () => ({ zoomIn: vi.fn(), zoomOut: vi.fn(), fitBounds: vi.fn() }),
+}));
+
 vi.mock('@/shared/map/BaseMap', () => ({
   BaseMap: ({
     children,
@@ -26,15 +30,18 @@ vi.mock('@/shared/map/BaseMap', () => ({
 }));
 
 vi.mock('@/features/planning/components/map/MapViewport', () => ({
-  FitBoundsOnMount: () => null,
   FitOnGenerate: () => null,
   FitSelectedRoute: () => null,
-  InvalidateOnLayout: () => null,
-  InvalidateOnMount: () => null,
   PanToPoint: () => null,
 }));
 
-vi.mock('@/features/planning/components/map/MapClickDeselect', () => ({
+vi.mock('@/shared/map/MapViewport', () => ({
+  FitBoundsOnMount: () => null,
+  InvalidateOnLayout: () => null,
+  InvalidateOnMount: () => null,
+}));
+
+vi.mock('@/shared/map/MapClickDeselect', () => ({
   MapClickDeselect: () => null,
   stopMapClickPropagation: () => undefined,
 }));
@@ -63,8 +70,8 @@ vi.mock('@/features/planning/components/markers/UnassignedStopMarker', () => ({
   UnassignedStopMarker: () => null,
 }));
 
-vi.mock('@/features/planning/components/PlanningMapToolbar', () => ({
-  PlanningMapToolbar: () => null,
+vi.mock('@/shared/map/MapToolbar', () => ({
+  MapToolbar: () => null,
 }));
 
 describe('PlanningMap scroll-wheel zoom', () => {

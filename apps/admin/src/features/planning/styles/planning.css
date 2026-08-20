@@ -67,22 +67,6 @@
   overflow: hidden;
 }
 
-.planning-map-pane {
-  position: relative;
-  min-width: 0;
-  min-height: 0;
-  flex: 1;
-  overflow: hidden;
-}
-
-/* Leaflet needs a definite box; % height alone collapses inside nested flex. */
-.planning-map-pane .leaflet-container {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
 .planning-inspector {
   width: 264px;
   flex-shrink: 0;
@@ -280,66 +264,6 @@
 .planning-icon-btn:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
-}
-
-.planning-map-toolbar {
-  position: absolute;
-  top: 10px;
-  inset-inline-end: 10px;
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.planning-map-tool-cluster {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: rgba(20, 28, 39, 0.94);
-  border: 1px solid var(--border-default);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(8px);
-}
-
-.planning-map-tool-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: 300;
-  line-height: 1;
-  transition:
-    background 0.1s,
-    color 0.1s;
-}
-
-.planning-map-tool-btn:hover:not(:disabled) {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.planning-map-tool-btn:disabled {
-  color: var(--text-disabled);
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
-.planning-map-tool-btn[aria-pressed='true'] {
-  background: rgba(61, 123, 212, 0.18);
-  color: #7aacf7;
-}
-
-.planning-map-tool-sep {
-  height: 1px;
-  background: var(--border-subtle);
 }
 
 .planning-route-state {
@@ -684,15 +608,6 @@
   white-space: nowrap;
   pointer-events: none;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
-}
-
-.leaflet-tooltip.planning-map-tooltip {
-  padding: 6px 8px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--r-sm);
-  background: rgba(20, 28, 39, 0.96);
-  color: var(--text-primary);
-  box-shadow: var(--shadow-sm);
 }
 
 .planning-banner {

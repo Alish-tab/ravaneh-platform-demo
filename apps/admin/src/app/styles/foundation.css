@@ -524,49 +524,6 @@
   border-color: rgba(43, 157, 111, 0.25);
 }
 
-/* Map chrome (Leaflet overlays later) */
-.map-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 8px;
-  background: rgba(20, 28, 39, 0.94);
-  border: 1px solid var(--border-default);
-  border-radius: var(--r-md);
-  backdrop-filter: blur(8px);
-  box-shadow: var(--shadow-sm);
-}
-.map-tool-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--r-xs);
-  color: var(--text-secondary);
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  transition:
-    background 0.1s,
-    color 0.1s;
-  font-family: var(--font-primary);
-}
-.map-tool-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-.map-tool-btn.active {
-  background: var(--accent-dim);
-  color: var(--accent-text);
-}
-.map-tool-separator {
-  width: 1px;
-  height: 18px;
-  background: var(--border-subtle);
-  margin: 0 2px;
-}
-
 @keyframes pulse-dot {
   0%,
   100% {

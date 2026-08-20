@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { useMap } from 'react-leaflet';
 
 type MapClickDeselectProps = {
   enabled: boolean;

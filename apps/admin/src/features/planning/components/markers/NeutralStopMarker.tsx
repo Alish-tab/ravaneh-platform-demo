@@ -40,7 +40,7 @@ export function NeutralStopMarker({ stop }: NeutralStopMarkerProps) {
         {
           direction: 'top',
           offset: [0, -(size / 2 + 6)],
-          className: 'planning-map-tooltip',
+          className: 'map-tooltip',
         },
       );
       return () => {
@@ -65,7 +65,7 @@ export function NeutralStopMarker({ stop }: NeutralStopMarkerProps) {
     }
     circle.bindTooltip(
       `<div dir="rtl" style="font-family:Vazirmatn,sans-serif;font-size:11px"><div style="font-weight:600;margin-bottom:2px">${primary?.recipientName ?? stop.stopId}</div><div style="color:#7d95b5;font-size:10px">${primary?.address ?? ''}</div></div>`,
-      { direction: 'top', offset: [0, -8], className: 'planning-map-tooltip' },
+      { direction: 'top', offset: [0, -8], className: 'map-tooltip' },
     );
     markerRef.current = circle;
     return () => {

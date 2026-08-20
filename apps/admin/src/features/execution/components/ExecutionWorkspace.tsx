@@ -233,7 +233,7 @@ export function ExecutionWorkspace({
             }}
           />
         ) : (
-          <div className="execution-map-pane" data-testid="execution-map" data-selected-area-id="">
+          <div className="shared-map-pane" data-testid="execution-map" data-selected-area-id="">
             <div className="execution-map-fallback">نقشه پس از بارگذاری داده در دسترس است.</div>
           </div>
         )}

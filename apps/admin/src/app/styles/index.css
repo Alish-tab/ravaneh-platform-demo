@@ -3,6 +3,7 @@
 @import './tokens.css';
 @import './foundation.css';
 @import 'leaflet/dist/leaflet.css';
+@import '../../shared/map/map.css';
 
 @theme {
   --font-sans: var(--font-primary), ui-sans-serif, system-ui, sans-serif;

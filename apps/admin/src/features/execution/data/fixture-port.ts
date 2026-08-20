@@ -1,6 +1,6 @@
 import type { PlansDataPort } from '@/features/plans/fixture/plans-fixture';
 import type { PlanningPlanFixture } from '@/features/planning/fixture/types';
-import { buildRouteAreas } from '@/features/planning/map/route-area';
+import { buildExecutionAreaPolygon } from '@/features/execution/data/area-geometry';
 import { ROUTE_PALETTE_HEX } from '@/shared/map/grammar';
 import { toPersianDigits } from '@/shared/lib/format';
 import type { ExecutionDataPort } from '@/features/execution/data/port';
@@ -170,17 +170,13 @@ export function createExecutionFixturePort(options: {
   }
 
   function createSnapshotFromPublished(planId: string, published: PlanningPlanFixture): ExecutionSnapshot {
-    const routeAreas = buildRouteAreas(published.areas);
-
     const execAreas: ExecutionSnapshot['areas'] = published.areas.map((area) => {
-      const entry = routeAreas.find((e) => e.areaId === area.areaId);
-      const stopPoints = area.stops.map((s) => [s.lat, s.lng] as [number, number]);
       return {
         id: area.areaId,
         name: area.label,
         color: area.color,
         driverName: area.driverName ?? '—',
-        polygon: entry?.area?.positions ?? (stopPoints.length >= 3 ? stopPoints : []),
+        polygon: buildExecutionAreaPolygon(area.stops),
       };
     });
 

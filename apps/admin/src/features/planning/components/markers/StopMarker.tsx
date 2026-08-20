@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { CircleMarker, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
-import { stopMapClickPropagation } from '@/features/planning/components/map/MapClickDeselect';
+import { stopMapClickPropagation } from '@/shared/map/MapClickDeselect';
 import type { PlanningStop } from '@/features/planning/fixture/types';
 import { toPersianDigits } from '@/shared/lib/format';
 
@@ -60,7 +60,7 @@ export function StopMarker({
       }}
     >
       {!isStopSelected && task ? (
-        <Tooltip direction="top" offset={[0, -8]} className="planning-map-tooltip">
+        <Tooltip direction="top" offset={[0, -8]} className="map-tooltip">
           <div className="text-start text-[11px]" dir="rtl">
             <div className="mb-0.5 font-semibold">{task.recipientName}</div>
             <div className="text-[10px] text-[var(--text-secondary)]">{task.address}</div>
@@ -114,7 +114,7 @@ function MultiStopMarker({
       const names = stop.tasks.map((task) => task.recipientName).join('، ');
       marker.bindTooltip(
         `<div dir="rtl" style="font-family:Vazirmatn,sans-serif;font-size:11px;max-width:200px"><div style="font-weight:600;margin-bottom:3px">${toPersianDigits(count)} سفارش</div><div style="color:#7d95b5;font-size:10px">${names}</div></div>`,
-        { direction: 'top', offset: [0, -(size / 2 + 6)], className: 'planning-map-tooltip' },
+        { direction: 'top', offset: [0, -(size / 2 + 6)], className: 'map-tooltip' },
       );
     }
     return () => {

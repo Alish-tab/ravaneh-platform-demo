@@ -1,7 +1,5 @@
-import { Polygon } from 'react-leaflet';
-
-import { stopMapClickPropagation } from '@/features/planning/components/map/MapClickDeselect';
 import type { RouteAreaEntry } from '@/features/planning/map/route-area';
+import { AreaPolygon, type AreaPolygonVisualState } from '@/shared/map/AreaPolygon';
 
 /** A03 polygon pathOptions — primary Planning area visual. */
 export const ROUTE_AREA_STYLE = {
@@ -28,31 +26,22 @@ export function RoutePolygons({ areas, activeAreaId, onSelectRoute }: RoutePolyg
 
         const isSelected = activeAreaId === entry.areaId;
         const isAmbient = activeAreaId !== null && !isSelected;
-        const style = isSelected
-          ? ROUTE_AREA_STYLE.selected
+        const visualState: AreaPolygonVisualState = isSelected
+          ? 'selected'
           : isAmbient
-            ? ROUTE_AREA_STYLE.ambient
-            : ROUTE_AREA_STYLE.normal;
+            ? 'ambient'
+            : 'normal';
         const hasIssue = entry.planState === 'modified';
 
         return (
-          <Polygon
+          <AreaPolygon
             key={entry.areaId}
             positions={entry.area.positions}
-            pathOptions={{
-              color: entry.color,
-              weight: style.weight,
-              opacity: style.opacity,
-              fillColor: entry.color,
-              fillOpacity: style.fillOpacity,
-              dashArray: hasIssue && !isSelected ? '6 6' : undefined,
-            }}
-            eventHandlers={{
-              click: (event) => {
-                stopMapClickPropagation(event);
-                onSelectRoute(entry.areaId);
-              },
-            }}
+            color={entry.color}
+            visualState={visualState}
+            presentation={ROUTE_AREA_STYLE}
+            dashArray={hasIssue && !isSelected ? '6 6' : undefined}
+            onClick={() => onSelectRoute(entry.areaId)}
           />
         );
       })}

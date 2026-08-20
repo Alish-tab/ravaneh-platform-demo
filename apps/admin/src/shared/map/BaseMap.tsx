@@ -41,5 +41,3 @@ export function BaseMap({
     </MapContainer>
   );
 }
-
-export { TileLayer } from 'react-leaflet';

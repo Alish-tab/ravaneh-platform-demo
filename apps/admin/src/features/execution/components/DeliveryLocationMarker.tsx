@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 
-import { stopMapClickPropagation } from '@/features/planning/components/map/MapClickDeselect';
+import { stopMapClickPropagation } from '@/shared/map/MapClickDeselect';
 import { toPersianDigits } from '@/shared/lib/format';
 import type { ExecutionUiStatus } from '@/features/execution/model/types';
 
@@ -78,7 +78,7 @@ export function DeliveryLocationMarker({
     });
     marker.bindTooltip(
       `<div dir="rtl" style="font-family:Vazirmatn,sans-serif;font-size:11px">${label}</div>`,
-      { direction: 'top', offset: [0, -(size / 2 + 4)], className: 'planning-map-tooltip' },
+      { direction: 'top', offset: [0, -(size / 2 + 4)], className: 'map-tooltip' },
     );
     return () => {
       marker.remove();

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { deriveRouteArea, buildRouteAreas } from '@/features/planning/map/route-area';
 import { PLANNING_PLAN_FIXTURE } from '@/features/planning/fixture/planning-fixture';
 import type { PlanningStop } from '@/features/planning/fixture/types';
+import { deriveAreaGeometry, type MapCoordinate } from '@/shared/map/area-geometry';
 
 describe('deriveRouteArea', () => {
   it('returns null when fewer than 3 stops', () => {
@@ -59,5 +60,12 @@ describe('deriveRouteArea', () => {
     }
     // All current fixture routes have ≥3 spatially spread stops
     expect(entries.every((entry) => entry.area !== null)).toBe(true);
+  });
+
+  it('preserves Planning model-to-coordinate polygon output', () => {
+    const area = PLANNING_PLAN_FIXTURE.areas[0]!;
+    const coordinates = area.stops.map(({ lat, lng }) => [lat, lng] as MapCoordinate);
+
+    expect(deriveRouteArea(area.stops)).toEqual(deriveAreaGeometry(coordinates));
   });
 });

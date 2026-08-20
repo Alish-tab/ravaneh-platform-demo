@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { CircleMarker, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
-import { stopMapClickPropagation } from '@/features/planning/components/map/MapClickDeselect';
+import { stopMapClickPropagation } from '@/shared/map/MapClickDeselect';
 import type { PlanningStop } from '@/features/planning/fixture/types';
 import { toPersianDigits } from '@/shared/lib/format';
 
@@ -38,7 +38,7 @@ export function UnassignedStopMarker({ stop, isSelected, onSelect }: UnassignedS
       }}
     >
       {!isSelected ? (
-        <Tooltip direction="top" offset={[0, -8]} className="planning-map-tooltip">
+        <Tooltip direction="top" offset={[0, -8]} className="map-tooltip">
           <div className="text-start text-[11px]" dir="rtl">
             <div className="font-semibold text-[var(--warning-text)]">بدون محدوده</div>
             <div className="mt-0.5 text-[10px] text-[var(--text-secondary)]">
