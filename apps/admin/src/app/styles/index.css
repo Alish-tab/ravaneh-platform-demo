@@ -52,7 +52,11 @@ body {
   z-index: 0;
   background: var(--bg-base);
 }
-
+.leaflet-tooltip,
+.leaflet-popup {
+  left: 0;
+  top: 0;
+}
 .leaflet-control-attribution {
   background: rgba(20, 28, 39, 0.85) !important;
   color: var(--text-muted) !important;
