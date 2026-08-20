@@ -10,6 +10,12 @@ import { MapClickDeselect, stopMapClickPropagation } from '@/features/planning/c
 import { FitBoundsOnMount, InvalidateOnLayout, InvalidateOnMount } from '@/features/planning/components/map/MapViewport';
 import { BaseMap } from '@/shared/map/BaseMap';
 
+const AREA_STYLE = {
+  selected: { weight: 3, opacity: 0.9, fillOpacity: 0.18 },
+  ambient: { weight: 1.5, opacity: 0.28, fillOpacity: 0.05 },
+  normal: { weight: 2, opacity: 0.7, fillOpacity: 0.12 },
+} as const;
+
 type ExecutionMapProps = {
   snapshot: ExecutionSnapshot;
   selectedAreaId: string | null;
@@ -50,16 +56,17 @@ export function ExecutionMap({
           {snapshot.areas.map((area) => {
             const isSelected = selectedAreaId === area.id;
             const isAmbient = selectedAreaId !== null && !isSelected;
+            const style = isSelected ? AREA_STYLE.selected : isAmbient ? AREA_STYLE.ambient : AREA_STYLE.normal;
             return (
               <Polygon
                 key={area.id}
                 positions={area.polygon}
                 pathOptions={{
                   color: area.color,
-                  weight: isSelected ? 1.5 : 1,
-                  opacity: isSelected ? 0.32 : isAmbient ? 0.08 : 0.13,
+                  weight: style.weight,
+                  opacity: style.opacity,
                   fillColor: area.color,
-                  fillOpacity: isSelected ? 0.09 : isAmbient ? 0.02 : 0.04,
+                  fillOpacity: style.fillOpacity,
                 }}
                 eventHandlers={{
                   click: (event) => {
