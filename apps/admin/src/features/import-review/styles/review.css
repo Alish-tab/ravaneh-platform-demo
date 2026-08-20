@@ -283,8 +283,17 @@
   gap: 8px;
 }
 
+.review-location-dialog .dialog {
+  width: min(760px, calc(100vw - 32px));
+}
+
+.review-location-dialog .dialog-body {
+  padding: 14px;
+}
+
 .review-location-map {
-  height: 160px;
+  height: min(52vh, 420px);
+  min-height: 300px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--r-sm);
   overflow: hidden;
@@ -292,7 +301,7 @@
 }
 
 .review-location-leaflet {
-  height: 160px;
+  height: 100%;
   width: 100%;
 }
 

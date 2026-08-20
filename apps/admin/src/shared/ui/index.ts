@@ -1,5 +1,6 @@
 export { Button, type ButtonSize, type ButtonVariant } from '@/shared/ui/Button';
 export { Checkbox } from '@/shared/ui/Checkbox';
+export { DialogShell, type DialogShellProps } from '@/shared/ui/DialogShell';
 export { Field, Input } from '@/shared/ui/Field';
 export { InlineMessage, Toast, type FeedbackTone } from '@/shared/ui/Feedback';
 export { LtrData, LtrIso } from '@/shared/ui/Ltr';

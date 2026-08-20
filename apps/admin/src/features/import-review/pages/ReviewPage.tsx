@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import { BulkReviewInspector } from '@/features/import-review/components/BulkReviewInspector';
 import { ReviewInspector } from '@/features/import-review/components/ReviewInspector';
+import { ReviewLocationDialog } from '@/features/import-review/components/ReviewLocationDialog';
 import { ReviewSummaryToolbar } from '@/features/import-review/components/ReviewSummaryToolbar';
 import { ReviewTable } from '@/features/import-review/components/ReviewTable';
 import { useReviewFixture } from '@/features/import-review/fixture/useReviewFixture';
@@ -11,6 +12,7 @@ import {
   isHistoricalReviewView,
   isPublishedReviewView,
 } from '@/features/import-review/review-model';
+import type { ReviewTask } from '@/features/import-review/review-types';
 import { PlanContextHeader } from '@/features/plans/components/PlanContextHeader';
 import { Icon, ICONS } from '@/features/plans/components/icons';
 import { usePlansDataPort } from '@/features/plans/fixture/usePlansFixture';
@@ -29,6 +31,7 @@ export function ReviewPage() {
   const [continuing, setContinuing] = useState(false);
   const [continueError, setContinueError] = useState(false);
   const [creatingWorking, setCreatingWorking] = useState(false);
+  const [locationTask, setLocationTask] = useState<ReviewTask | null>(null);
 
   const continueToPlanning = () => {
     if (!plan || !review.canContinue) return;
@@ -256,7 +259,7 @@ export function ReviewPage() {
             pendingKind={review.pendingAction?.kind}
             saveFailed={review.feedback?.tone === 'error'}
             readOnly={readOnly}
-            onResolveLocation={review.resolveLocation}
+            onOpenLocation={setLocationTask}
             onEditInformation={review.editInformation}
             onResolveDuplicate={review.resolveDuplicate}
             onExclude={(id) => review.exclude([id])}
@@ -264,6 +267,16 @@ export function ReviewPage() {
           />
         )}
       </div>
+
+      {locationTask ? (
+        <ReviewLocationDialog
+          key={locationTask.id}
+          task={locationTask}
+          pending={review.pendingAction?.kind === 'location'}
+          onConfirm={review.resolveLocation}
+          onCancel={() => setLocationTask(null)}
+        />
+      ) : null}
 
       <footer className="review-progress">
         <div className="flex flex-1 items-center gap-[7px] text-[12.5px] text-[var(--text-secondary)]">

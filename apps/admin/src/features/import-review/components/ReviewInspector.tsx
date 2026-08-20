@@ -4,7 +4,6 @@ import { Icon, ICONS } from '@/features/plans/components/icons';
 import { Button, Field, InlineMessage, Input, LtrData, Panel, StatusBadge } from '@/shared/ui';
 import { formatPhoneForDisplay } from '@/shared/lib/phone';
 
-import { ReviewLocationEditor } from '@/features/import-review/components/ReviewLocationEditor';
 import {
   REVIEW_ISSUE_PRESENTATION,
   REVIEW_ISSUE_SEVERITY,
@@ -16,23 +15,21 @@ import {
   hasLocationIssue,
   locationSourceLabel,
   rawSourceLocation,
-  savedLocation,
 } from '@/features/import-review/review-model';
 import type {
   ReviewActionKind,
-  ReviewLatLng,
   ReviewTask,
   ReviewTaskUpdate,
 } from '@/features/import-review/review-types';
 
-type Mode = 'overview' | 'location' | 'edit' | 'duplicate' | 'exclude' | 'restore' | 'discard';
+type Mode = 'overview' | 'edit' | 'duplicate' | 'exclude' | 'restore' | 'discard';
 type Props = {
   task: ReviewTask | null;
   allTasks: ReviewTask[];
   pendingKind?: ReviewActionKind;
   saveFailed?: boolean;
   readOnly?: boolean;
-  onResolveLocation: (id: string, coords: ReviewLatLng) => Promise<boolean>;
+  onOpenLocation: (task: ReviewTask) => void;
   onEditInformation: (id: string, values: ReviewTaskUpdate) => Promise<boolean>;
   onResolveDuplicate: (id: string, decision: 'both_valid' | 'exclude_current') => Promise<boolean>;
   onExclude: (id: string) => Promise<boolean>;
@@ -52,14 +49,13 @@ export function ReviewInspector({
   pendingKind,
   saveFailed = false,
   readOnly = false,
-  onResolveLocation,
+  onOpenLocation,
   onEditInformation,
   onResolveDuplicate,
   onExclude,
   onRestore,
 }: Props) {
   const [mode, setMode] = useState<Mode>('overview');
-  const [proposed, setProposed] = useState<ReviewLatLng | null>(null);
   const [originalValuesOpen, setOriginalValuesOpen] = useState(false);
   const [editValues, setEditValues] = useState<ReviewTaskUpdate>({
     name: '',
@@ -86,7 +82,6 @@ export function ReviewInspector({
       return;
     }
     setMode('overview');
-    setProposed(null);
   };
 
   const header = (title: string) => (
@@ -125,60 +120,6 @@ export function ReviewInspector({
           </Button>
           <Button variant="subtle" onClick={() => setMode('edit')}>
             ادامه ویرایش
-          </Button>
-        </div>
-      </aside>
-    );
-  }
-
-  if (mode === 'location') {
-    const saved = savedLocation(task);
-    return (
-      <aside className="review-inspector">
-        {header('اصلاح موقعیت')}
-        <div className="flex flex-col gap-3 overflow-y-auto p-3.5">
-          <InlineMessage tone="warning">
-            روی نقشه کلیک کنید تا موقعیت پیشنهادی انتخاب شود. تا ذخیره، موقعیت فعلی تغییر نمی‌کند.
-          </InlineMessage>
-          <Panel title="مبدأ خام">
-            <p className="m-0 text-xs text-[var(--text-secondary)]">{task.rawAddress}</p>
-            <LtrData className="mt-1 block text-[10.5px] text-[var(--text-muted)]">
-              {task.rawLatitude || '—'}, {task.rawLongitude || '—'}
-            </LtrData>
-          </Panel>
-          <ReviewLocationEditor
-            saved={saved}
-            proposed={proposed}
-            onPropose={setProposed}
-            readOnly={readOnly}
-          />
-          {saveFailed ? (
-            <InlineMessage tone="error">
-              ذخیره ناموفق بود. موقعیت پیشنهادی حفظ شده است.
-            </InlineMessage>
-          ) : null}
-          <Button
-            disabled={!proposed || readOnly}
-            loading={pendingKind === 'location'}
-            onClick={async () => {
-              if (!proposed) return;
-              if (await onResolveLocation(task.id, proposed)) {
-                setProposed(null);
-                setMode('overview');
-              }
-            }}
-          >
-            ذخیره موقعیت
-          </Button>
-          <Button
-            variant="subtle"
-            disabled={Boolean(pendingKind)}
-            onClick={() => {
-              setProposed(null);
-              setMode('overview');
-            }}
-          >
-            انصراف
           </Button>
         </div>
       </aside>
@@ -484,7 +425,7 @@ export function ReviewInspector({
                   variant="secondary"
                   size="sm"
                   className="review-inspector-action"
-                  onClick={() => setMode('location')}
+                  onClick={() => onOpenLocation(task)}
                 >
                   <Icon d={ICONS.map_pin} size={12} /> اصلاح موقعیت
                 </Button>

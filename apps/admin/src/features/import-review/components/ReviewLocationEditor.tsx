@@ -3,6 +3,7 @@ import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 
 import { BaseMap } from '@/shared/map/BaseMap';
+import { InvalidateOnMount } from '@/shared/map/MapViewport';
 import { LtrData } from '@/shared/ui';
 
 import {
@@ -17,15 +18,6 @@ type ReviewLocationEditorProps = {
   onPropose: (coords: ReviewLatLng) => void;
   readOnly?: boolean;
 };
-
-function InvalidateReviewMap() {
-  const map = useMap();
-  useEffect(() => {
-    const timer = window.setTimeout(() => map.invalidateSize(), 80);
-    return () => window.clearTimeout(timer);
-  }, [map]);
-  return null;
-}
 
 function ReviewLocationLayer({
   saved,
@@ -113,7 +105,11 @@ export function ReviewLocationEditor({
           if (readOnly) return;
           const target = event.target as HTMLElement;
           if (target.closest('[data-testid="base-map-stub"]')) {
-            onPropose(REVIEW_TEST_PROPOSED_LOCATION);
+            onPropose(
+              proposed
+                ? { lat: REVIEW_TEST_PROPOSED_LOCATION.lat + 0.01, lng: REVIEW_TEST_PROPOSED_LOCATION.lng + 0.01 }
+                : REVIEW_TEST_PROPOSED_LOCATION,
+            );
           }
         }}
       >
@@ -124,7 +120,7 @@ export function ReviewLocationEditor({
           zoomControl={false}
           scrollWheelZoom={!readOnly}
         >
-          <InvalidateReviewMap />
+          <InvalidateOnMount />
           <ReviewLocationLayer
             saved={saved}
             proposed={proposed}
@@ -134,22 +130,32 @@ export function ReviewLocationEditor({
         </BaseMap>
       </div>
       <div className="review-location-coords">
-        <div>
+        <div className="flex min-w-0 flex-col items-center gap-1 text-center">
           <span className="review-inspector-label !mb-0">موقعیت ذخیره‌شده</span>
           {saved ? (
-            <LtrData data-testid="review-saved-coords">{formatLatLng(saved)}</LtrData>
+            <LtrData className="max-w-full" data-testid="review-saved-coords">
+              {formatLatLng(saved)}
+            </LtrData>
           ) : (
-            <span data-testid="review-saved-coords" className="text-[var(--text-disabled)]">
+            <span
+              data-testid="review-saved-coords"
+              className="max-w-full text-[var(--text-disabled)]"
+            >
               موقعیت عملیاتی ثبت نشده
             </span>
           )}
         </div>
-        <div>
+        <div className="flex min-w-0 flex-col items-center gap-1 text-center">
           <span className="review-inspector-label !mb-0">موقعیت پیشنهادی</span>
           {proposed ? (
-            <LtrData data-testid="review-proposed-coords">{formatLatLng(proposed)}</LtrData>
+            <LtrData className="max-w-full" data-testid="review-proposed-coords">
+              {formatLatLng(proposed)}
+            </LtrData>
           ) : (
-            <span data-testid="review-proposed-coords" className="text-[var(--text-disabled)]">
+            <span
+              data-testid="review-proposed-coords"
+              className="max-w-full text-[var(--text-disabled)]"
+            >
               روی نقشه کلیک کنید
             </span>
           )}

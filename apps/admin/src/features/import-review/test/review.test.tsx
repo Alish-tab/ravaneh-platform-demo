@@ -1,6 +1,6 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { REVIEW_FIXTURE_FAILURE_VALUE } from '@/features/import-review/fixture/useReviewFixture';
 import { isSameOrderDuplicate } from '@/features/import-review/review-model';
@@ -134,21 +134,37 @@ describe('Review shell', () => {
 
   it('proposes a map location without replacing saved until save', async () => {
     const user = userEvent.setup();
-    renderApp('/plans/P-2405/review');
+    const { port } = renderApp('/plans/P-2405/review');
     await screen.findByText('اطلاعات گیرنده');
     expect(screen.getByRole('button', { name: 'موقعیت پیدا نشد (۱)' })).toBeInTheDocument();
 
+    expect(screen.queryByTestId('review-location-map')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'اصلاح موقعیت' }));
+    expect(screen.getByRole('dialog', { name: 'اصلاح موقعیت' })).toBeInTheDocument();
     expect(screen.getByText('موقعیت عملیاتی ثبت نشده')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'تأیید موقعیت' })).toBeDisabled();
     await user.click(screen.getByTestId('base-map-stub'));
     expect(screen.getByTestId('review-proposed-coords')).toHaveTextContent('35.7000, 51.4000');
     expect(screen.getByTestId('review-saved-coords')).toHaveTextContent('موقعیت عملیاتی ثبت نشده');
 
-    await user.click(screen.getByRole('button', { name: 'ذخیره موقعیت' }));
+    expect(screen.getByRole('button', { name: 'تأیید موقعیت' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: 'تأیید موقعیت' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'اصلاح موقعیت' })).not.toBeInTheDocument(),
+    );
     await waitFor(() =>
       expect(within(screen.getByRole('table')).queryByText('علی حسینی')).not.toBeInTheDocument(),
     );
     expect(screen.getByText('موقعیت سفارش ذخیره شد.')).toBeInTheDocument();
+    const updated = (await port.listReviewItems('P-2405')).find(
+      (item) => item.reviewItemId === 'D-1044',
+    );
+    expect(updated).toMatchObject({
+      resolvedLat: 35.7,
+      resolvedLng: 51.4,
+      locSource: 'manual',
+    });
+    expect(updated?.issues).not.toContain('loc_not_found');
     expect(screen.getByRole('button', { name: 'موقعیت پیدا نشد (۰)' })).toBeInTheDocument();
     const summary = screen.getByLabelText('خلاصه بررسی');
     await user.click(within(summary).getByRole('button', { name: /آماده/ }));
@@ -167,11 +183,11 @@ describe('Review shell', () => {
 
     await user.click(screen.getByRole('button', { name: 'اصلاح موقعیت' }));
     await user.click(screen.getByTestId('base-map-stub'));
-    await user.click(screen.getByRole('button', { name: 'ذخیره موقعیت' }));
+    await user.click(screen.getByRole('button', { name: 'تأیید موقعیت' }));
 
     expect(await screen.findByText('ذخیره تغییرات آزمایشی ناموفق بود. دوباره تلاش کنید.')).toBeInTheDocument();
     expect(screen.getByTestId('review-proposed-coords')).toHaveTextContent('35.7000, 51.4000');
-    expect(screen.getByRole('button', { name: 'ذخیره موقعیت' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'تأیید موقعیت' })).toBeInTheDocument();
   });
 
   it('cancels location correction without changing saved location', async () => {
@@ -183,7 +199,56 @@ describe('Review shell', () => {
     expect(screen.getByTestId('review-saved-coords')).toHaveTextContent('35.7638, 51.3500');
     await user.click(screen.getByTestId('base-map-stub'));
     await user.click(screen.getByRole('button', { name: 'انصراف' }));
+    expect(screen.queryByRole('dialog', { name: 'اصلاح موقعیت' })).not.toBeInTheDocument();
     expect(screen.getAllByText('35.7638, 51.3500').length).toBeGreaterThan(0);
+  });
+
+  it('replaces the proposed location when another map point is selected', async () => {
+    const user = userEvent.setup();
+    renderApp('/plans/P-2405/review');
+    await screen.findByText('اطلاعات گیرنده');
+
+    await user.click(screen.getByRole('button', { name: 'اصلاح موقعیت' }));
+    await user.click(screen.getByTestId('base-map-stub'));
+    expect(screen.getByTestId('review-proposed-coords')).toHaveTextContent('35.7000, 51.4000');
+    await user.click(screen.getByTestId('base-map-stub'));
+    expect(screen.getByTestId('review-proposed-coords')).toHaveTextContent('35.7100, 51.4100');
+    expect(screen.getAllByTestId('review-proposed-coords')).toHaveLength(1);
+  });
+
+  it('treats the close button and Escape as cancellation', async () => {
+    const user = userEvent.setup();
+    renderApp('/plans/P-2405/review');
+    await screen.findByText('اطلاعات گیرنده');
+
+    await user.click(screen.getByRole('button', { name: 'اصلاح موقعیت' }));
+    await user.click(screen.getByTestId('base-map-stub'));
+    await user.click(screen.getByRole('button', { name: 'بستن' }));
+    expect(screen.queryByRole('dialog', { name: 'اصلاح موقعیت' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'اصلاح موقعیت' }));
+    expect(screen.getByTestId('review-proposed-coords')).toHaveTextContent('روی نقشه کلیک کنید');
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'اصلاح موقعیت' })).not.toBeInTheDocument();
+  });
+
+  it('prevents duplicate location confirmation while a save is pending', async () => {
+    const user = userEvent.setup();
+    const { port } = renderApp('/plans/P-2405/review');
+    await screen.findByText('اطلاعات گیرنده');
+    const resolveLocation = vi.spyOn(port, 'resolveReviewLocation');
+
+    await user.click(screen.getByRole('button', { name: 'اصلاح موقعیت' }));
+    await user.click(screen.getByTestId('base-map-stub'));
+    const confirm = screen.getByRole('button', { name: 'تأیید موقعیت' });
+    fireEvent.click(confirm);
+    fireEvent.click(confirm);
+
+    expect(resolveLocation).toHaveBeenCalledTimes(1);
+    expect(confirm).toBeDisabled();
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'اصلاح موقعیت' })).not.toBeInTheDocument(),
+    );
   });
 
   it('navigates to Planning without mutating lifecycle or currentStage', async () => {

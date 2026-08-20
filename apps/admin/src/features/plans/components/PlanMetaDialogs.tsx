@@ -3,7 +3,7 @@
 import { Button, Field, InlineMessage, Input } from '@/shared/ui';
 
 import type { A01PlanViewModel } from '@/features/plans/a01-types';
-import { DialogShell } from '@/features/plans/components/DialogShell';
+import { DialogShell } from '@/shared/ui/DialogShell';
 import { Icon, ICONS } from '@/features/plans/components/icons';
 import { A01_DELIVERY_WINDOWS } from '@/features/plans/presentation';
 

@@ -11,7 +11,7 @@ import {
   type JalaliDate,
 } from '@/shared/date/jalali';
 
-import { DialogShell } from '@/features/plans/components/DialogShell';
+import { DialogShell } from '@/shared/ui/DialogShell';
 import { Icon, ICONS } from '@/features/plans/components/icons';
 import { generatePlanName } from '@/features/plans/plan-name';
 import { A01_DELIVERY_WINDOWS } from '@/features/plans/presentation';

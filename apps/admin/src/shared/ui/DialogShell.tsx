@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 
-type DialogShellProps = {
+export type DialogShellProps = {
   title: string;
   subtitle?: string;
   icon?: ReactNode;
@@ -8,6 +8,8 @@ type DialogShellProps = {
   footer: ReactNode;
   onClose: () => void;
   labelledBy?: string;
+  showCloseButton?: boolean;
+  closeDisabled?: boolean;
 };
 
 export function DialogShell({
@@ -18,6 +20,8 @@ export function DialogShell({
   footer,
   onClose,
   labelledBy,
+  showCloseButton = false,
+  closeDisabled = false,
 }: DialogShellProps) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -68,6 +72,17 @@ export function DialogShell({
               <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{subtitle}</p>
             ) : null}
           </div>
+          {showCloseButton ? (
+            <button
+              type="button"
+              className="btn btn-ghost btn-icon ms-auto"
+              aria-label="بستن"
+              disabled={closeDisabled}
+              onClick={onClose}
+            >
+              ×
+            </button>
+          ) : null}
         </div>
         <div className="dialog-body">{children}</div>
         <div className="dialog-footer">{footer}</div>
