@@ -80,13 +80,16 @@
 .planning-inspector-collapsed {
   width: 40px;
   flex-shrink: 0;
+  align-self: stretch;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 6px 0;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 10px 0 0;
   background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: none;
   border-inline-start: 1px solid var(--border-default);
+  cursor: pointer;
 }
 
 .planning-inspector-header {

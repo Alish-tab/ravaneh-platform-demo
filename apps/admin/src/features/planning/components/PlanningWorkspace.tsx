@@ -114,8 +114,6 @@ export function PlanningWorkspace({
   );
 
   const dirtyRouteCount = fixture.routes.filter((route) => route.dirty).length;
-  const activeRouteColor =
-    fixture.areas.find((area) => area.areaId === planning.activeRouteId)?.color ?? undefined;
 
   useEffect(() => {
     if (!planning.correctionStopId) return;
@@ -358,8 +356,6 @@ export function PlanningWorkspace({
         {planning.panelCollapsed ? (
           <PlanningCollapsedPanel
             onExpand={() => planning.setPanelCollapsed(false)}
-            selectionMode={planning.selectionMode}
-            activeRouteColor={activeRouteColor}
           />
         ) : dispatchOpen ? (
           <DispatchPrepPanel

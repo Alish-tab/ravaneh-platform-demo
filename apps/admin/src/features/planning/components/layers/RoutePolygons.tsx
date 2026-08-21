@@ -3,9 +3,9 @@ import { AreaPolygon, type AreaPolygonVisualState } from '@/shared/map/AreaPolyg
 
 /** A03 polygon pathOptions — primary Planning area visual. */
 export const ROUTE_AREA_STYLE = {
-  selected: { weight: 3, opacity: 0.9, fillOpacity: 0.18 },
-  ambient: { weight: 1.5, opacity: 0.22, fillOpacity: 0.04 },
-  normal: { weight: 2, opacity: 0.65, fillOpacity: 0.1 },
+  selected: { weight: 3.5, opacity: 1, fillOpacity: 0.34 },
+  ambient: { weight: 2, opacity: 0.75, fillOpacity: 0.08 },
+  normal: { weight: 2, opacity: 0.8, fillOpacity: 0.12 },
 } as const;
 
 type RoutePolygonsProps = {

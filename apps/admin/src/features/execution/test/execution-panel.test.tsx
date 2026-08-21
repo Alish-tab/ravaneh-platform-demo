@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { renderExecution } from '@/features/execution/test/render';
+import { ICONS } from '@/features/plans/components/icons';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -39,11 +40,19 @@ describe('A04 operations panel', () => {
     const user = userEvent.setup();
     await renderExecution();
     await screen.findByTestId('execution-panel');
-    await user.click(screen.getByRole('button', { name: 'بستن پنل عملیات' }));
+    const map = screen.getByTestId('execution-map');
+    const close = screen.getByRole('button', { name: 'بستن پنل عملیات' });
+    expect(close.querySelector('path')).toHaveAttribute('d', ICONS.panel_end);
+    await user.click(close);
     expect(screen.queryByTestId('execution-panel')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'باز کردن پنل عملیات' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'باز کردن پنل عملیات' }));
+    const reopen = screen.getByRole('button', { name: 'باز کردن پنل عملیات' });
+    expect(reopen.querySelector('path')).toHaveAttribute('d', ICONS.panel_end);
+    expect(reopen).toHaveClass('execution-panel-rail');
+    expect(getComputedStyle(reopen).alignItems).toBe('flex-start');
+    expect(screen.getByTestId('execution-map')).toBe(map);
+    await user.click(reopen);
     expect(screen.getByTestId('execution-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('execution-map')).toBe(map);
   });
 
   it('opens a multi-order location and a single-order location', async () => {

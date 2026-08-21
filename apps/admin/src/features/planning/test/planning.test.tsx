@@ -8,6 +8,7 @@ import { AppProviders } from '@/app/providers/AppProviders';
 import { appRoutes } from '@/app/router';
 import { PlanningSidePanel } from '@/features/planning/components/PlanningSidePanel';
 import { PlanningWorkspace } from '@/features/planning/components/PlanningWorkspace';
+import { ICONS } from '@/features/plans/components/icons';
 import {
   assignDriverToRoute,
   removeDriverFromRoute,
@@ -338,6 +339,27 @@ function PanelHarness() {
 }
 
 describe('Planning workspace', { timeout: 15_000 }, () => {
+  it('keeps the layers icon as the collapsed panel toggle and reopens without replacing the map', async () => {
+    const user = userEvent.setup();
+    render(<WorkspaceHarness />);
+    const map = screen.getByTestId('planning-map');
+    const expandedPanel = screen.getByLabelText('پانل محدوده‌ها');
+    expect(expandedPanel.querySelector('path')).toHaveAttribute('d', ICONS.layers);
+
+    await user.click(screen.getByTitle('بستن پانل'));
+    const reopen = screen.getByTitle('باز کردن پانل');
+    expect(reopen.querySelector('path')).toHaveAttribute('d', ICONS.layers);
+    expect(reopen.querySelector('path')).not.toHaveAttribute('d', ICONS.chevron_l);
+    expect(reopen).toHaveClass('planning-inspector-collapsed');
+    expect(getComputedStyle(reopen).alignItems).toBe('flex-start');
+    expect(getComputedStyle(reopen).paddingTop).toBe('10px');
+    expect(screen.getByTestId('planning-map')).toBe(map);
+
+    await user.click(reopen);
+    expect(screen.getByLabelText('پانل محدوده‌ها')).toBeInTheDocument();
+    expect(screen.getByTestId('planning-map')).toBe(map);
+  });
+
   it('renders the planning page shell in pre-generation with active stage', async () => {
     renderPlanningPage();
 

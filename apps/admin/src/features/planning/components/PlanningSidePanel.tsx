@@ -42,6 +42,10 @@ import { Button, LtrData } from '@/shared/ui';
 import { toPersianDigits } from '@/shared/lib/format';
 import { formatPhoneForDisplay } from '@/shared/lib/phone';
 
+function PlanningSidebarIcon() {
+  return <Icon d={ICONS.layers} size={13} />;
+}
+
 type PlanningSidePanelProps = {
   fixture: PlanningPlanFixture;
   selectedRouteId: string | null;
@@ -370,7 +374,7 @@ function RoutesListPanel({
   return (
     <aside className="planning-inspector" aria-label="پانل محدوده‌ها">
       <div className="planning-inspector-header">
-        <Icon d={ICONS.layers} size={13} />
+        <PlanningSidebarIcon />
         <span className="planning-inspector-title">محدوده‌ها</span>
         <span className="planning-inspector-count">{toPersianDigits(fixture.areas.length)}</span>
         <button type="button" className="planning-icon-btn" title="بستن پانل" onClick={onClose}>
@@ -1137,45 +1141,18 @@ function StopDetailPanel({
 
 type CollapsedPanelProps = {
   onExpand: () => void;
-  selectionMode: 'none' | 'route' | 'stop' | 'order';
-  activeRouteColor?: string;
 };
 
-export function PlanningCollapsedPanel({
-  onExpand,
-  selectionMode,
-  activeRouteColor,
-}: CollapsedPanelProps) {
-  const modeIcon =
-    selectionMode === 'stop' || selectionMode === 'order'
-      ? ICONS.map_pin
-      : selectionMode === 'route'
-        ? ICONS.layers
-        : ICONS.layers;
-
+export function PlanningCollapsedPanel({ onExpand }: CollapsedPanelProps) {
   return (
-    <div className="planning-inspector-collapsed" aria-label="پانل جمع‌شده">
-      <button type="button" className="planning-icon-btn" title="باز کردن پانل" onClick={onExpand}>
-        <Icon d={ICONS.chevron_l} size={14} />
-      </button>
-      <div className="my-1 h-px w-5 bg-[var(--border-subtle)]" />
-      <div
-        className="flex h-7 w-7 items-center justify-center"
-        style={{
-          color:
-            selectionMode === 'none'
-              ? 'var(--text-muted)'
-              : (activeRouteColor ?? 'var(--accent-text)'),
-        }}
-      >
-        <Icon d={modeIcon} size={14} />
-      </div>
-      {selectionMode !== 'none' && activeRouteColor ? (
-        <div
-          className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full"
-          style={{ background: activeRouteColor }}
-        />
-      ) : null}
-    </div>
+    <button
+      type="button"
+      className="planning-inspector-collapsed"
+      aria-label="باز کردن پانل"
+      title="باز کردن پانل"
+      onClick={onExpand}
+    >
+      <Icon d={ICONS.panel_end} size={14} />
+    </button>
   );
 }
